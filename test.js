@@ -3,6 +3,7 @@
 const { test } = require('tap')
 const { Cache } = require('.')
 const { promisify } = require('util')
+const { AsyncLocalStorage } = require('async_hooks')
 
 const sleep = promisify(setTimeout)
 
@@ -236,4 +237,33 @@ test('ttl', async (t) => {
   await sleep(2000)
 
   t.same(await cache.fetchSomething(42), { k: 42 })
+})
+
+test('AsyncLocalStoreage', (t) => {
+  t.plan(5)
+  const als = new AsyncLocalStorage()
+  const cache = new Cache()
+
+  cache.define('fetchSomething', async (query) => {
+    t.equal(query, 42)
+    return { k: query }
+  })
+
+  als.run({ foo: 'bar' }, function () {
+    setImmediate(function () {
+      cache.fetchSomething(42).then((res) => {
+        t.same(res, { k: 42 })
+        t.same(als.getStore(), { foo: 'bar' })
+      })
+    })
+  })
+
+  als.run({ bar: 'foo' }, function () {
+    setImmediate(function () {
+      cache.fetchSomething(42).then((res) => {
+        t.same(res, { k: 42 })
+        t.same(als.getStore(), { bar: 'foo' })
+      })
+    })
+  })
 })
