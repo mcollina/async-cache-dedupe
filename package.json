@@ -1,0 +1,31 @@
+{
+  "name": "async-cache-dedupe",
+  "version": "0.0.1",
+  "description": "An async deduping cache",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard | snazzy && tap test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcollina/async-dedupe-cache.git"
+  },
+  "keywords": [
+    "cache",
+    "single",
+    "user",
+    "graphql"
+  ],
+  "author": "Matteo Collina <hello@matteocollina.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@fastify/pre-commit": "^2.0.0",
+    "snazzy": "^8.0.0",
+    "standard": "^16.0.0",
+    "tap": "^15.0.9"
+  },
+  "dependencies": {
+    "mnemonist": "^0.38.3",
+    "safe-stable-stringify": "^1.1.0"
+  }
+}
