@@ -267,3 +267,22 @@ test('AsyncLocalStoreage', (t) => {
     })
   })
 })
+
+test('do not cache failures', async (t) => {
+  t.plan(4)
+
+  const cache = new Cache()
+
+  let called = false
+  cache.define('fetchSomething', async (query) => {
+    t.pass('called')
+    if (!called) {
+      called = true
+      throw new Error('kaboom')
+    }
+    return { k: query }
+  })
+
+  await t.rejects(cache.fetchSomething(42))
+  t.same(await cache.fetchSomething(42), { k: 42 })
+})

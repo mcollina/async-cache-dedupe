@@ -68,18 +68,25 @@ class Wrapper {
     this.ttl = ttl
   }
 
+  buildPromise (query, args, key) {
+    query.promise = this.func(args)
+    // we fork the promise chain on purpose
+    query.promise.catch(() => this.ids.set(key, undefined))
+  }
+
   add (args) {
     const id = this.serialize ? this.serialize(args) : args
     const key = typeof id === 'string' ? id : stringify(id)
 
     let query = this.ids.get(key)
     if (!query) {
-      query = new Query(id, args, this.func)
+      query = new Query(id)
+      this.buildPromise(query, args, key)
       this.ids.set(key, query)
     } else if (this.ttl > 0) {
       if (currentSecond() - query.lastAccessed > this.ttl) {
         // restart
-        query.promise = this.func.call(null, args)
+        this.buildPromise(query, args, key)
       }
     }
 
@@ -90,9 +97,9 @@ class Wrapper {
 }
 
 class Query {
-  constructor (id, args, func) {
+  constructor (id) {
     this.id = id
-    this.promise = func(args)
+    this.promise = null
     this.lastAccessed = null
   }
 
