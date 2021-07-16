@@ -2,6 +2,9 @@
 
 const { test } = require('tap')
 const { Cache } = require('.')
+const { promisify } = require('util')
+
+const sleep = promisify(setTimeout)
 
 const kValues = require('./symbol')
 
@@ -213,4 +216,24 @@ test('cacheSize on constructor', async (t) => {
     { k: 24 },
     { k: 42 }
   ])
+})
+
+test('ttl', async (t) => {
+  t.plan(5)
+
+  const cache = new Cache({
+    ttl: 1 // seconds
+  })
+
+  cache.define('fetchSomething', async (query) => {
+    t.equal(query, 42)
+    return { k: query }
+  })
+
+  t.same(await cache.fetchSomething(42), { k: 42 })
+  t.same(await cache.fetchSomething(42), { k: 42 })
+
+  await sleep(2000)
+
+  t.same(await cache.fetchSomething(42), { k: 42 })
 })
