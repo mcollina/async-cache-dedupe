@@ -1,18 +1,4 @@
-# async-cache-dedupe
-
-`async-cache-dedupe` is a cache for asynchronous fetching of resources
-with full deduplication, i.e. the same resource is only asked once at any given time.
-
-## Install
-
-```bash
-npm i async-cache-dedupe
-```
-
-## Example
-
-```js
-import { Cache } from 'async-cache-dedupe'
+import { Cache } from './index.js'
 
 const cache = new Cache({
   ttl: 5 // seconds
@@ -38,10 +24,3 @@ console.log(res)
 //   { k: 24 }
 //   { k: 42 }
 // ]
-```
-
-Commonjs/`require` is also supported.
-
-## License
-
-MIT

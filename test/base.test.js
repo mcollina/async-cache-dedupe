@@ -1,13 +1,10 @@
 'use strict'
 
 const { test } = require('tap')
-const { Cache } = require('.')
-const { promisify } = require('util')
+const { Cache } = require('..')
 const { AsyncLocalStorage } = require('async_hooks')
 
-const sleep = promisify(setTimeout)
-
-const kValues = require('./symbol')
+const kValues = require('../symbol')
 
 test('create a Cache that dedupes', async (t) => {
   // plan verifies that fetchSomething is called only once
@@ -217,26 +214,6 @@ test('cacheSize on constructor', async (t) => {
     { k: 24 },
     { k: 42 }
   ])
-})
-
-test('ttl', async (t) => {
-  t.plan(5)
-
-  const cache = new Cache({
-    ttl: 1 // seconds
-  })
-
-  cache.define('fetchSomething', async (query) => {
-    t.equal(query, 42)
-    return { k: query }
-  })
-
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
-
-  await sleep(2000)
-
-  t.same(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('AsyncLocalStoreage', (t) => {

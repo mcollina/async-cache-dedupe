@@ -72,6 +72,9 @@ class Wrapper {
     query.promise = this.func(args)
     // we fork the promise chain on purpose
     query.promise.catch(() => this.ids.set(key, undefined))
+    if (this.ttl > 0) {
+      query.cachedOn = currentSecond()
+    }
   }
 
   add (args) {
@@ -84,13 +87,11 @@ class Wrapper {
       this.buildPromise(query, args, key)
       this.ids.set(key, query)
     } else if (this.ttl > 0) {
-      if (currentSecond() - query.lastAccessed > this.ttl) {
+      if (currentSecond() - query.cachedOn > this.ttl) {
         // restart
         this.buildPromise(query, args, key)
       }
     }
-
-    query.touch()
 
     return query.promise
   }
@@ -100,12 +101,8 @@ class Query {
   constructor (id) {
     this.id = id
     this.promise = null
-    this.lastAccessed = null
-  }
-
-  touch () {
-    this.lastAccessed = currentSecond()
+    this.cachedOn = null
   }
 }
 
-module.exports = { Cache }
+module.exports.Cache = Cache

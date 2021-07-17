@@ -4,7 +4,7 @@
   "description": "An async deduping cache",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test.js"
+    "test": "standard | snazzy && tap test/*test.js"
   },
   "repository": {
     "type": "git",
@@ -27,5 +27,8 @@
   "dependencies": {
     "mnemonist": "^0.38.3",
     "safe-stable-stringify": "^1.1.0"
+  },
+  "standard": {
+    "ignore": ["example.mjs"]
   }
 }
