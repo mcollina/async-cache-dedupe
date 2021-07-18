@@ -21,6 +21,10 @@ class Cache {
       opts = {}
     }
 
+    if (key && this[key]) {
+      throw new Error(`${key} is already defined in the cache or it is a forbidden name`)
+    }
+
     opts = opts || {}
 
     if (typeof func !== 'function') {
@@ -39,6 +43,17 @@ class Cache {
 
     this[kValues][key] = wrapper
     this[key] = wrapper.add.bind(wrapper)
+  }
+
+  clear (key, value) {
+    if (key) {
+      this[kValues][key].clear(value)
+      return
+    }
+
+    for (const wrapper of Object.values(this[kValues])) {
+      wrapper.clear()
+    }
   }
 }
 
@@ -77,13 +92,17 @@ class Wrapper {
     }
   }
 
-  add (args) {
+  getKey (args) {
     const id = this.serialize ? this.serialize(args) : args
-    const key = typeof id === 'string' ? id : stringify(id)
+    return typeof id === 'string' ? id : stringify(id)
+  }
+
+  add (args) {
+    const key = this.getKey(args)
 
     let query = this.ids.get(key)
     if (!query) {
-      query = new Query(id)
+      query = new Query()
       this.buildPromise(query, args, key)
       this.ids.set(key, query)
     } else if (this.ttl > 0) {
@@ -95,11 +114,19 @@ class Wrapper {
 
     return query.promise
   }
+
+  clear (value) {
+    if (value) {
+      const key = this.getKey(value)
+      this.ids.set(key, undefined)
+      return
+    }
+    this.ids.clear()
+  }
 }
 
 class Query {
-  constructor (id) {
-    this.id = id
+  constructor () {
     this.promise = null
     this.cachedOn = null
   }
