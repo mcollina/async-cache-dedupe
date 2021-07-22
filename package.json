@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mcollina/async-dedupe-cache.git"
+    "url": "git+https://github.com/mcollina/async-cache-dedupe.git"
   },
   "keywords": [
     "cache",
