@@ -3,19 +3,21 @@
 const { test } = require('tap')
 const { Cache } = require('..')
 const { AsyncLocalStorage } = require('async_hooks')
+const stringify = require('safe-stable-stringify')
 
 const kValues = require('../symbol')
 
 test('create a Cache that dedupes', async (t) => {
   // plan verifies that fetchSomething is called only once
-  t.plan(3)
+  t.plan(5)
 
   const cache = new Cache()
 
   const expected = [42, 24]
 
-  cache.define('fetchSomething', async (query) => {
+  cache.define('fetchSomething', async (query, cacheKey) => {
     t.equal(query, expected.shift())
+    t.equal(stringify(query), cacheKey)
     return { k: query }
   })
 
@@ -111,7 +113,7 @@ test('missing serialize', async (t) => {
 
 test('safe stable serialize', async (t) => {
   // plan verifies that fetchSomething is called only once
-  t.plan(3)
+  t.plan(5)
 
   const cache = new Cache()
 
@@ -120,8 +122,10 @@ test('safe stable serialize', async (t) => {
     { hello: 'world' }
   ]
 
-  cache.define('fetchSomething', async (query) => {
+  cache.define('fetchSomething', async (query, cacheKey) => {
     t.same(query, expected.shift())
+    t.equal(stringify(query), cacheKey)
+
     return { k: query }
   })
 
