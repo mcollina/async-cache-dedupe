@@ -53,7 +53,7 @@ Options:
 * `tll`: the maximum time a cache entry can live, default `0`
 * `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default `1024`.
 
-### `cache.define(name[, opts], original(arg))`
+### `cache.define(name[, opts], original(arg, cacheKey))`
 
 Define a new function to cache of the given `name`.
 
@@ -64,7 +64,8 @@ Options:
 * `serialize`: a function to convert the given argument into a serializable object (or string)
 
 The `define` method adds a `cache[name]` function that will call the `original` function if the result is not present
-in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`](https://www.npmjs.com/package/safe-stable-stringify).
+in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`](https://www.npmjs.com/package/safe-stable-stringify)
+and it is passed as the `cacheKey` argument to the original function.
 
 ### `cache.clear([name], [arg])`
 

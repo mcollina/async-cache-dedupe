@@ -84,7 +84,7 @@ class Wrapper {
   }
 
   buildPromise (query, args, key) {
-    query.promise = this.func(args)
+    query.promise = this.func(args, key)
     // we fork the promise chain on purpose
     query.promise.catch(() => this.ids.set(key, undefined))
     if (this.ttl > 0) {
