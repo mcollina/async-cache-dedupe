@@ -61,7 +61,8 @@ Options:
 
 * `tll`: the maximum time a cache entry can live, default as defined in the cache.
 * `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default as defined in the cache.
-* `serialize`: a function to convert the given argument into a serializable object (or string)
+* `serialize`: a function to convert the given argument into a serializable object (or string).
+* `onHit`: a function that is called every time there is a hit in the cache.
 
 The `define` method adds a `cache[name]` function that will call the `original` function if the result is not present
 in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`](https://www.npmjs.com/package/safe-stable-stringify)

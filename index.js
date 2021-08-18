@@ -6,6 +6,7 @@ const LRUCache = require('mnemonist/lru-cache')
 
 const kCacheSize = Symbol('kCacheSize')
 const kTTL = Symbol('kTTL')
+const kOnHit = Symbol('kOnHit')
 
 class Cache {
   constructor (opts) {
@@ -13,6 +14,7 @@ class Cache {
     this[kValues] = {}
     this[kCacheSize] = opts.cacheSize || 1024
     this[kTTL] = opts.ttl || 0
+    this[kOnHit] = opts.onHit || noop
   }
 
   define (key, opts, func) {
@@ -38,8 +40,9 @@ class Cache {
 
     const cacheSize = opts.cacheSize || this[kCacheSize]
     const ttl = opts.ttl || this[kTTL]
+    const onHit = opts.onHit || this[kOnHit]
 
-    const wrapper = new Wrapper(func, key, serialize, cacheSize, ttl)
+    const wrapper = new Wrapper(func, key, serialize, cacheSize, ttl, onHit)
 
     this[kValues][key] = wrapper
     this[key] = wrapper.add.bind(wrapper)
@@ -73,7 +76,7 @@ function _clearSecond () {
 }
 
 class Wrapper {
-  constructor (func, key, serialize, cacheSize, ttl) {
+  constructor (func, key, serialize, cacheSize, ttl, onHit) {
     this.ids = new LRUCache(cacheSize)
     this.error = null
     this.started = false
@@ -81,6 +84,7 @@ class Wrapper {
     this.key = key
     this.serialize = serialize
     this.ttl = ttl
+    this.onHit = onHit
   }
 
   buildPromise (query, args, key) {
@@ -99,6 +103,7 @@ class Wrapper {
 
   add (args) {
     const key = this.getKey(args)
+    const onHit = this.onHit
 
     let query = this.ids.get(key)
     if (!query) {
@@ -106,10 +111,13 @@ class Wrapper {
       this.buildPromise(query, args, key)
       this.ids.set(key, query)
     } else if (this.ttl > 0) {
+      onHit()
       if (currentSecond() - query.cachedOn > this.ttl) {
         // restart
         this.buildPromise(query, args, key)
       }
+    } else {
+      onHit()
     }
 
     return query.promise
@@ -131,5 +139,7 @@ class Query {
     this.cachedOn = null
   }
 }
+
+function noop () {}
 
 module.exports.Cache = Cache
