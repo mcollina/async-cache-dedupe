@@ -9,9 +9,14 @@ const kValues = require('../symbol')
 
 test('create a Cache that dedupes', async (t) => {
   // plan verifies that fetchSomething is called only once
-  t.plan(5)
+  t.plan(6)
 
-  const cache = new Cache()
+  let hits = 0
+  const cache = new Cache({
+    onHit () {
+      hits++
+    }
+  })
 
   const expected = [42, 24]
 
@@ -32,6 +37,7 @@ test('create a Cache that dedupes', async (t) => {
     { k: 24 },
     { k: 42 }
   ])
+  t.equal(hits, 1)
 })
 
 test('create a Cache that dedupes full signature', async (t) => {
