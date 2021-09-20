@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "mnemonist": "^0.38.3",
-    "safe-stable-stringify": "^1.1.0"
+    "safe-stable-stringify": "^2.0.0"
   },
   "standard": {
     "ignore": ["example.mjs"]
