@@ -13,7 +13,7 @@ test('create a Cache that dedupes', async (t) => {
 
   let hits = 0
   const cache = new Cache({
-    onHit () {
+    onDedupe () {
       hits++
     }
   })
@@ -402,4 +402,42 @@ test('throws for methods in the property chain', async function (t) {
       cache.define(key, () => {})
     })
   }
+})
+
+test('should dedupe and cache only for the single request', async (t) => {
+  t.plan(10)
+
+  let hits = 0
+  const cache = new Cache({
+    onDedupe () {
+      hits++
+    }
+  })
+
+  const expected = [42, 24, 42]
+
+  cache.define('fetchSomething', async (query, cacheKey) => {
+    t.equal(query, expected.shift())
+    t.equal(stringify(query), cacheKey)
+    return { k: query }
+  })
+
+  const p1 = cache.fetchSomething(42)
+  const p2 = cache.fetchSomething(24)
+  const p3 = cache.fetchSomething(42)
+
+  let res = await Promise.all([p1, p2, p3])
+
+  t.same(res, [
+    { k: 42 },
+    { k: 24 },
+    { k: 42 }
+  ])
+  t.equal(hits, 1)
+
+  const p4 = cache.fetchSomething(42)
+  res = await p4
+
+  t.same(res, { k: 42 })
+  t.equal(hits, 1, 'should not dedupe the single request')
 })

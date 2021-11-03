@@ -29,6 +29,8 @@
     "safe-stable-stringify": "^2.0.0"
   },
   "standard": {
-    "ignore": ["example.mjs"]
+    "ignore": [
+      "example.mjs"
+    ]
   }
 }

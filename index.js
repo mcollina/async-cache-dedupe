@@ -4,17 +4,15 @@ const kValues = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const LRUCache = require('mnemonist/lru-cache')
 
-const kCacheSize = Symbol('kCacheSize')
-const kTTL = Symbol('kTTL')
-const kOnHit = Symbol('kOnHit')
+const kSize = Symbol('kSize')
+const kOnDedupe = Symbol('kOnDedupe')
 
 class Cache {
   constructor (opts) {
     opts = opts || {}
     this[kValues] = {}
-    this[kCacheSize] = opts.cacheSize || 1024
-    this[kTTL] = opts.ttl || 0
-    this[kOnHit] = opts.onHit || noop
+    this[kSize] = opts.size || 1024
+    this[kOnDedupe] = opts.onDedupe || noop
   }
 
   define (key, opts, func) {
@@ -38,11 +36,10 @@ class Cache {
       throw new TypeError('serialize must be a function')
     }
 
-    const cacheSize = opts.cacheSize || this[kCacheSize]
-    const ttl = opts.ttl || this[kTTL]
-    const onHit = opts.onHit || this[kOnHit]
+    const size = opts.size || this[kSize]
+    const onDedupe = opts.onDedupe || this[kOnDedupe]
 
-    const wrapper = new Wrapper(func, key, serialize, cacheSize, ttl, onHit)
+    const wrapper = new Wrapper(func, key, serialize, size, onDedupe)
 
     this[kValues][key] = wrapper
     this[key] = wrapper.add.bind(wrapper)
@@ -60,40 +57,26 @@ class Cache {
   }
 }
 
-let _currentSecond
-
-function currentSecond () {
-  if (_currentSecond !== undefined) {
-    return _currentSecond
-  }
-  _currentSecond = Math.floor(Date.now() / 1000)
-  setTimeout(_clearSecond, 1000).unref()
-  return _currentSecond
-}
-
-function _clearSecond () {
-  _currentSecond = undefined
-}
-
 class Wrapper {
-  constructor (func, key, serialize, cacheSize, ttl, onHit) {
-    this.ids = new LRUCache(cacheSize)
+  constructor (func, key, serialize, size, /* ttl, */ onDedupe) {
+    this.ids = new LRUCache(size)
     this.error = null
-    this.started = false
     this.func = func
     this.key = key
     this.serialize = serialize
-    this.ttl = ttl
-    this.onHit = onHit
+    this.onDedupe = onDedupe
   }
 
   buildPromise (query, args, key) {
     query.promise = this.func(args, key)
     // we fork the promise chain on purpose
-    query.promise.catch(() => this.ids.set(key, undefined))
-    if (this.ttl > 0) {
-      query.cachedOn = currentSecond()
-    }
+    query.promise
+      .then(result => {
+        // clear the cache when the promise is resolved
+        this.ids.set(key, undefined)
+        return result
+      })
+      .catch(() => this.ids.set(key, undefined))
   }
 
   getKey (args) {
@@ -103,21 +86,15 @@ class Wrapper {
 
   add (args) {
     const key = this.getKey(args)
-    const onHit = this.onHit
+    const onDedupe = this.onDedupe
 
     let query = this.ids.get(key)
     if (!query) {
       query = new Query()
       this.buildPromise(query, args, key)
       this.ids.set(key, query)
-    } else if (this.ttl > 0) {
-      onHit()
-      if (currentSecond() - query.cachedOn > this.ttl) {
-        // restart
-        this.buildPromise(query, args, key)
-      }
     } else {
-      onHit()
+      onDedupe()
     }
 
     return query.promise
@@ -136,7 +113,6 @@ class Wrapper {
 class Query {
   constructor () {
     this.promise = null
-    this.cachedOn = null
   }
 }
 
