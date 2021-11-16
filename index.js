@@ -90,9 +90,12 @@ class Wrapper {
   buildPromise (query, args, key) {
     query.promise = this.func(args, key)
     // we fork the promise chain on purpose
-    query.promise.catch(() => this.ids.set(key, undefined))
+    const p = query.promise.catch(() => this.ids.set(key, undefined))
     if (this.ttl > 0) {
       query.cachedOn = currentSecond()
+    } else {
+      // clear the cache if there is no TTL
+      p.then(() => this.ids.set(key, undefined))
     }
   }
 
