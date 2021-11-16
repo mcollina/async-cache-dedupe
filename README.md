@@ -50,7 +50,7 @@ Creates a new cache.
 
 Options:
 
-* `tll`: the maximum time a cache entry can live, default `0`
+* `tll`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as as the promise resolves.
 * `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default `1024`.
 
 ### `cache.define(name[, opts], original(arg, cacheKey))`

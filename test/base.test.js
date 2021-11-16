@@ -2,7 +2,6 @@
 
 const { test } = require('tap')
 const { Cache } = require('..')
-const { AsyncLocalStorage } = require('async_hooks')
 const stringify = require('safe-stable-stringify')
 
 const kValues = require('../symbol')
@@ -226,167 +225,6 @@ test('cacheSize on constructor', async (t) => {
   ])
 })
 
-test('AsyncLocalStoreage', (t) => {
-  t.plan(5)
-  const als = new AsyncLocalStorage()
-  const cache = new Cache()
-
-  cache.define('fetchSomething', async (query) => {
-    t.equal(query, 42)
-    return { k: query }
-  })
-
-  als.run({ foo: 'bar' }, function () {
-    setImmediate(function () {
-      cache.fetchSomething(42).then((res) => {
-        t.same(res, { k: 42 })
-        t.same(als.getStore(), { foo: 'bar' })
-      })
-    })
-  })
-
-  als.run({ bar: 'foo' }, function () {
-    setImmediate(function () {
-      cache.fetchSomething(42).then((res) => {
-        t.same(res, { k: 42 })
-        t.same(als.getStore(), { bar: 'foo' })
-      })
-    })
-  })
-})
-
-test('do not cache failures', async (t) => {
-  t.plan(4)
-
-  const cache = new Cache()
-
-  let called = false
-  cache.define('fetchSomething', async (query) => {
-    t.pass('called')
-    if (!called) {
-      called = true
-      throw new Error('kaboom')
-    }
-    return { k: query }
-  })
-
-  await t.rejects(cache.fetchSomething(42))
-  t.same(await cache.fetchSomething(42), { k: 42 })
-})
-
-test('clear the full cache', async (t) => {
-  t.plan(7)
-
-  const cache = new Cache()
-
-  cache.define('fetchA', async (query) => {
-    t.pass('a called')
-    return { k: query }
-  })
-
-  cache.define('fetchB', async (query) => {
-    t.pass('b called')
-    return { j: query }
-  })
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-
-  cache.clear()
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-})
-
-test('clears only one method', async (t) => {
-  t.plan(6)
-
-  const cache = new Cache()
-
-  cache.define('fetchA', async (query) => {
-    t.pass('a called')
-    return { k: query }
-  })
-
-  cache.define('fetchB', async (query) => {
-    t.pass('b called')
-    return { j: query }
-  })
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-
-  cache.clear('fetchA')
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchB(24)
-  ]), [
-    { k: 42 },
-    { j: 24 }
-  ])
-})
-
-test('clears only one method with one value', async (t) => {
-  t.plan(5)
-
-  const cache = new Cache()
-
-  cache.define('fetchA', async (query) => {
-    t.pass('a called')
-    return { k: query }
-  })
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchA(24)
-  ]), [
-    { k: 42 },
-    { k: 24 }
-  ])
-
-  cache.clear('fetchA', 42)
-
-  t.same(await Promise.all([
-    cache.fetchA(42),
-    cache.fetchA(24)
-  ]), [
-    { k: 42 },
-    { k: 24 }
-  ])
-})
-
 test('throws for methods in the property chain', async function (t) {
   const cache = new Cache()
 
@@ -402,4 +240,40 @@ test('throws for methods in the property chain', async function (t) {
       cache.define(key, () => {})
     })
   }
+})
+
+test('automatically expires with no TTL', async (t) => {
+  // plan verifies that fetchSomething is called only once
+  t.plan(10)
+
+  let hits = 0
+  const cache = new Cache({
+    onHit () {
+      hits++
+    }
+  })
+
+  const expected = [42, 24, 42]
+
+  cache.define('fetchSomething', async (query, cacheKey) => {
+    t.equal(query, expected.shift())
+    t.equal(stringify(query), cacheKey)
+    return { k: query }
+  })
+
+  const p1 = cache.fetchSomething(42)
+  const p2 = cache.fetchSomething(24)
+  const p3 = cache.fetchSomething(42)
+
+  const res = await Promise.all([p1, p2, p3])
+
+  t.same(res, [
+    { k: 42 },
+    { k: 24 },
+    { k: 42 }
+  ])
+  t.equal(hits, 1)
+
+  t.same(await cache.fetchSomething(42), { k: 42 })
+  t.equal(hits, 1)
 })
