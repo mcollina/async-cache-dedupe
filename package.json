@@ -25,7 +25,7 @@
     "tap": "^15.0.9"
   },
   "dependencies": {
-    "mnemonist": "^0.38.3",
+    "mnemonist": "^0.39.0",
     "safe-stable-stringify": "^2.0.0"
   },
   "standard": {
