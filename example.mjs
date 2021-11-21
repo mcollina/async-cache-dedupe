@@ -1,7 +1,16 @@
 import { Cache } from './index.js'
 
+// TODO
+
 const cache = new Cache({
-  ttl: 5 // seconds
+  ttl: 5, // default ttl, in seconds
+  storage: new MemoryStorage({
+    size: 2048,
+    log: pino() // ...
+  }), // or new RedisStorage or AsyncLocalStorageWrapper
+  onDedupe: (key) => {
+    console.log('deduped', key)
+  }
 })
 
 cache.define('fetchSomething', async (k) => {

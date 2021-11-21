@@ -19,16 +19,21 @@
   "author": "Matteo Collina <hello@matteocollina.com>",
   "license": "MIT",
   "devDependencies": {
-    "@fastify/pre-commit": "^2.0.0",
+    "@fastify/pre-commit": "^2.0.2",
+    "ioredis": "^4.28.0",
+    "sinon": "^12.0.1",
     "snazzy": "^9.0.0",
-    "standard": "^16.0.0",
-    "tap": "^15.0.9"
+    "standard": "^16.0.4",
+    "tap": "^15.0.10"
   },
   "dependencies": {
-    "mnemonist": "^0.38.3",
-    "safe-stable-stringify": "^2.0.0"
+    "abstract-logging": "^2.0.1",
+    "mnemonist": "^0.38.5",
+    "safe-stable-stringify": "^2.2.0"
   },
   "standard": {
-    "ignore": ["example.mjs"]
+    "ignore": [
+      "example.mjs"
+    ]
   }
 }

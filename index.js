@@ -1,36 +1,48 @@
 'use strict'
 
-const kValues = require('./symbol')
+const { kValues, kStorage, kTTL, kOnDedupe, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
-const LRUCache = require('mnemonist/lru-cache')
-
-const kCacheSize = Symbol('kCacheSize')
-const kTTL = Symbol('kTTL')
-const kOnHit = Symbol('kOnHit')
 
 class Cache {
+  /**
+   * TODO signature
+   * @param {Options} opts
+   * @param {!Storage} opts.storage - the storage to use
+   * @param {number?} [opts.ttl=0] - in seconds; default 0 seconds, means no cache, only do dedupe
+   * @param {function} opts.onDedupe
+   * @param {function} opts.onHit
+   * @param {function} opts.onMiss
+   */
   constructor (opts) {
-    opts = opts || {}
+    // TODO validate all options
+
+    if (!opts || !opts.storage) {
+      throw new Error('Missing the storage')
+    }
+
     this[kValues] = {}
-    this[kCacheSize] = opts.cacheSize || 1024
+    this[kStorage] = opts.storage
     this[kTTL] = opts.ttl || 0
+    this[kOnDedupe] = opts.onDedupe || noop
     this[kOnHit] = opts.onHit || noop
+    this[kOnMiss] = opts.onMiss || noop
   }
 
-  define (key, opts, func) {
+  // TODO signature
+  define (name, opts, func) {
     if (typeof opts === 'function') {
       func = opts
       opts = {}
     }
 
-    if (key && this[key]) {
-      throw new Error(`${key} is already defined in the cache or it is a forbidden name`)
+    if (name && this[name]) {
+      throw new Error(`${name} is already defined in the cache or it is a forbidden name`)
     }
 
     opts = opts || {}
 
     if (typeof func !== 'function') {
-      throw new TypeError(`Missing the function parameter for '${key}'`)
+      throw new TypeError(`Missing the function parameter for '${name}'`)
     }
 
     const serialize = opts.serialize
@@ -38,65 +50,83 @@ class Cache {
       throw new TypeError('serialize must be a function')
     }
 
-    const cacheSize = opts.cacheSize || this[kCacheSize]
+    const references = opts.references
+    if (references && typeof references !== 'function') {
+      throw new TypeError('references must be a function')
+    }
+
+    // TODO doc we could even have a different storage for each key
+    const storage = opts.storage || this[kStorage]
     const ttl = opts.ttl || this[kTTL]
+    const onDedupe = opts.onDedupe || this[kOnDedupe]
     const onHit = opts.onHit || this[kOnHit]
+    const onMiss = opts.onMiss || this[kOnMiss]
 
-    const wrapper = new Wrapper(func, key, serialize, cacheSize, ttl, onHit)
+    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onHit, onMiss)
 
-    this[kValues][key] = wrapper
-    this[key] = wrapper.add.bind(wrapper)
+    this[kValues][name] = wrapper
+    this[name] = wrapper.add.bind(wrapper)
   }
 
-  clear (key, value) {
-    if (key) {
-      this[kValues][key].clear(value)
+  async clear (name, value) {
+    if (name) {
+      if (!this[kValues][name]) {
+        throw new Error(`${name} is not defined in the cache`)
+      }
+
+      await this[kValues][name].clear(value)
       return
     }
 
+    const clears = []
     for (const wrapper of Object.values(this[kValues])) {
-      wrapper.clear()
+      clears.push(wrapper.clear())
     }
+    await Promise.all(clears)
   }
-}
 
-let _currentSecond
+  async get (name, key) {
+    if (!this[kValues][name]) {
+      throw new Error(`${name} is not defined in the cache`)
+    }
 
-function currentSecond () {
-  if (_currentSecond !== undefined) {
-    return _currentSecond
+    // TODO validate?
+    return this[kValues][name].get(key)
   }
-  _currentSecond = Math.floor(Date.now() / 1000)
-  setTimeout(_clearSecond, 1000).unref()
-  return _currentSecond
-}
 
-function _clearSecond () {
-  _currentSecond = undefined
+  async set (name, key, value, ttl, references) {
+    if (!this[kValues][name]) {
+      throw new Error(`${name} is not defined in the cache`)
+    }
+
+    // TODO validate?
+    return this[kValues][name].set(key, value, ttl, references)
+  }
+
+  async invalidate (name, references) {
+    if (!this[kValues][name]) {
+      throw new Error(`${name} is not defined in the cache`)
+    }
+
+    // TODO validate?
+    return this[kValues][name].invalidate(references)
+  }
 }
 
 class Wrapper {
-  constructor (func, key, serialize, cacheSize, ttl, onHit) {
-    this.ids = new LRUCache(cacheSize)
-    this.error = null
-    this.started = false
+  // TODO signature
+  constructor (func, name, serialize, references, storage, ttl, onDedupe, onHit, onMiss) {
+    this.dedupes = new Map()
     this.func = func
-    this.key = key
+    this.name = name
     this.serialize = serialize
-    this.ttl = ttl
-    this.onHit = onHit
-  }
+    this.references = references
 
-  buildPromise (query, args, key) {
-    query.promise = this.func(args, key)
-    // we fork the promise chain on purpose
-    const p = query.promise.catch(() => this.ids.set(key, undefined))
-    if (this.ttl > 0) {
-      query.cachedOn = currentSecond()
-    } else {
-      // clear the cache if there is no TTL
-      p.then(() => this.ids.set(key, undefined))
-    }
+    this.storage = storage
+    this.ttl = ttl
+    this.onDedupe = onDedupe
+    this.onHit = onHit
+    this.onMiss = onMiss
   }
 
   getKey (args) {
@@ -104,45 +134,111 @@ class Wrapper {
     return typeof id === 'string' ? id : stringify(id)
   }
 
+  getStorageKey (key) {
+    return `${this.name}~${key}`
+  }
+
+  getStorageName () {
+    return `${this.name}~`
+  }
+
   add (args) {
     const key = this.getKey(args)
-    const onHit = this.onHit
 
-    let query = this.ids.get(key)
+    let query = this.dedupes.get(key)
     if (!query) {
       query = new Query()
       this.buildPromise(query, args, key)
-      this.ids.set(key, query)
-    } else if (this.ttl > 0) {
-      onHit()
-      if (currentSecond() - query.cachedOn > this.ttl) {
-        // restart
-        this.buildPromise(query, args, key)
-      }
+      this.dedupes.set(key, query)
     } else {
-      onHit()
+      this.onDedupe(key)
     }
 
     return query.promise
   }
 
-  clear (value) {
+  /**
+   * wrap the original func to sync storage
+   */
+  async wrapFunction (args, key) {
+    const storageKey = this.getStorageKey(key)
+    const data = await this.storage.get(storageKey)
+    if (data !== undefined) {
+      this.onHit(key)
+      return data
+    }
+
+    this.onMiss(key)
+
+    const result = await this.func(args, key)
+
+    if (this.ttl < 1) {
+      return result
+    }
+
+    if (!this.references) {
+      await this.storage.set(storageKey, result, this.ttl)
+      return result
+    }
+
+    const references = await this.references(args, key, result)
+    // TODO validate references?
+    await this.storage.set(storageKey, result, this.ttl, references)
+
+    return result
+  }
+
+  buildPromise (query, args, key) {
+    query.promise = this.wrapFunction(args, key)
+
+    // we fork the promise chain on purpose
+    query.promise
+      .then(result => {
+        // clear the dedupe once done
+        this.dedupes.set(key, undefined)
+        return result
+      })
+      // TODO do we want an onError event?
+      .catch(() => {
+        this.dedupes.set(key, undefined)
+        // TODO option to remove key from storage on error?
+        // we may want to relay on cache if the original function got error
+        // then we probably need more option for that
+        this.storage.remove(this.getStorageKey(key)).catch(noop)
+      })
+  }
+
+  async clear (value) {
+    // TODO validate?
     if (value) {
       const key = this.getKey(value)
-      this.ids.set(key, undefined)
+      this.dedupes.set(key, undefined)
+      await this.storage.remove(this.getStorageKey(key))
       return
     }
-    this.ids.clear()
+    await this.storage.clear(this.getStorageName())
+    this.dedupes.clear()
+  }
+
+  async get (key) {
+    return this.storage.get(key)
+  }
+
+  async set (key, value, ttl, references) {
+    return this.storage.set(key, value, ttl, references)
+  }
+
+  async invalidate (references) {
+    return this.storage.invalidate(references)
   }
 }
 
 class Query {
   constructor () {
     this.promise = null
-    this.cachedOn = null
   }
 }
 
-function noop () {}
+function noop () { }
 
 module.exports.Cache = Cache
