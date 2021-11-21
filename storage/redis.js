@@ -120,7 +120,6 @@ class StorageRedis extends StorageInterface {
     this.log.debug({ msg: 'acd/storage/redis.remove', key })
     try {
       const removed = await this.store.del(key) > 0
-      // TODO do not await clearReferences
       if (removed) { await this.clearReferences(key) }
       return removed
     } catch (err) {
@@ -156,7 +155,6 @@ class StorageRedis extends StorageInterface {
       }
 
       await this.store.pipeline(writes).exec()
-      // TODO do not await clearReferences
       await this.clearReferences(removed)
       return removed
     } catch (err) {
@@ -182,7 +180,6 @@ class StorageRedis extends StorageInterface {
 
       const removes = keys.map(key => ['del', key])
       await this.store.pipeline(removes).exec()
-      // TODO do not await clearReferences
       await this.clearReferences(keys)
     } catch (err) {
       this.log.error({ msg: 'acd/storage/redis.clear error', err, name })
@@ -213,7 +210,8 @@ class StorageRedis extends StorageInterface {
 
     try {
       // TODO check listener
-      const subscribed = await client.subscribe(`__keyevent@${db}__:expire`)
+      // TODO listen also maxmemory for evicted keys
+      const subscribed = await client.subscribe(`__keyevent@${db}__:expired`)
       if (subscribed !== 1) {
         throw new Error('cant subscribe to redis')
       }
@@ -228,45 +226,36 @@ class StorageRedis extends StorageInterface {
     // redis-cli --csv psubscribe '__key*__:*'
 
     client.on('message', (_channel, key) => {
-      this.clearReferences([key])
+      this.clearReferences(key)
     })
   }
 
   /**
    * note: does not throw on error
-   * @param {string[]} keys
+   * @param {string|string[]} keys
    */
   async clearReferences (keys) {
     try {
-      const writes = []
-      // TODO properly
-      for (const key of keys) {
-        const references = await this.store.smembers(`k:${key}`)
+      if (!Array.isArray(keys)) { keys = [keys] }
 
-        if (!references || references.length < 1) {
-          this.log.debug({ msg: 'acd/storage/redis.clearReference no references for key', key })
-          continue
+      const reads = keys.map(key => ['smembers', `k:${key}`])
+      const referencesKeys = await this.store.pipeline(reads).exec()
+
+      this.log.debug({ msg: 'acd/storage/redis.clearReference references', keys, referencesKeys })
+
+      const writes = {}
+      for (let i = 0; i < keys.length; i++) {
+        for (let j = 0; j < referencesKeys[i][1].length; j++) {
+          const reference = 'r:' + referencesKeys[i][1][j]
+          if (writes[reference]) { continue }
+          writes[reference] = ['srem', reference, keys]
         }
-
-        this.log.debug({ msg: 'acd/storage/redis.clearReference got references', key, references })
-        const reads = references.map(reference => (['smembers', `r:${reference}`]))
-        this.log.debug({ msg: 'acd/storage/redis.clearReference reads pipeline', reads })
-        const referencesKeys = await this.store.pipeline(reads).exec()
-        this.log.debug({ msg: 'acd/storage/redis.clearReference keys on references', referencesKeys })
-
-        for (let i = 0; i < referencesKeys.length; i++) {
-          const rk = referencesKeys[i]
-          rk[1].forEach(r => {
-            this.log.debug({ r })
-            // TODO filter duplicates
-            writes.push(['srem', 'r:' + references[i], key])
-          })
-        }
-        writes.push(['del', 'k:' + key])
-
-        this.log.debug({ msg: 'acd/storage/redis.clearReference writes pipeline', writes })
+        const key = 'k:' + keys[i]
+        writes[key] = ['del', key]
       }
-      await this.store.pipeline(writes).exec()
+
+      this.log.debug({ msg: 'acd/storage/redis.clearReference writes pipeline', writes })
+      await this.store.pipeline(Object.values(writes)).exec()
     } catch (err) {
       this.log.error({ msg: 'acd/storage/redis.clearReference error', err })
     }

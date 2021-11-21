@@ -9,7 +9,7 @@ const Redis = require('ioredis')
 const sleep = promisify(setTimeout)
 
 const redisClient = new Redis()
-// TODO const redisSubscription = new Redis()
+const redisListener = new Redis()
 
 const { test, before, beforeEach, teardown } = t
 
@@ -26,6 +26,7 @@ before(async () => {
 
 teardown(async () => {
   await redisClient.quit()
+  await redisListener.quit()
 })
 
 test('storage redis', async (t) => {
@@ -504,7 +505,7 @@ test('storage redis', async (t) => {
       const listener = {
         options: { db: 1 },
         subscribe: async (channel) => {
-          t.equal(channel, '__keyevent@1__:expire')
+          t.equal(channel, '__keyevent@1__:expired')
           return 1
         },
         on: (event, cb) => {
@@ -521,7 +522,7 @@ test('storage redis', async (t) => {
 
       const listener = {
         subscribe: async (channel) => {
-          t.equal(channel, '__keyevent@0__:expire')
+          t.equal(channel, '__keyevent@0__:expired')
           return 1
         },
         on: (event, cb) => {
@@ -539,7 +540,7 @@ test('storage redis', async (t) => {
       const listener = {
         options: {},
         subscribe: async (channel) => {
-          t.equal(channel, '__keyevent@0__:expire')
+          t.equal(channel, '__keyevent@0__:expired')
           return 1
         },
         on: (event, cb) => {
@@ -584,21 +585,50 @@ test('storage redis', async (t) => {
       const listener = {
         options: {},
         subscribe: async (channel) => 1,
-        on: (_event, cb) => {
-          event = cb
-        }
+        on: (_event, cb) => { event = cb }
       }
 
       const storage = await createStorage('redis', { client: redisClient, listener })
       sinon.spy(storage, 'clearReferences')
 
       event('the-channel', 'the-key')
-      t.ok(storage.clearReferences.calledOnceWith(['the-key']))
+      t.ok(storage.clearReferences.calledOnceWith('the-key'))
     })
   })
 
   test('clearReferences', async (t) => {
-    // TODO
+    test('should clear keys references', async (t) => {
+      const storage = await createStorage('redis', { client: redisClient })
+      await storage.set('a', 1, 10, ['fooers', 'vowels', 'empty'])
+      await storage.set('b', 1, 10, ['fooers', 'consonantes'])
+      await storage.set('c', 1, 10, ['fooers', 'consonantes'])
+      await storage.set('d', 1, 10, ['consonantes'])
+      await storage.set('e', 1, 10, ['vowels'])
+
+      await storage.clearReferences(['a', 'b', 'c', 'd', 'e'])
+
+      t.equal((await storage.store.smembers('r:fooers')).length, 0)
+      t.equal((await storage.store.smembers('r:empty')).length, 0)
+      t.equal((await storage.store.smembers('r:vowels')).length, 0)
+      t.equal((await storage.store.smembers('r:consonantes')).length, 0)
+    })
+
+    test('should clear a key references when expires', async (t) => {
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener })
+      const ttl = 1
+      await storage.set('ttl-a', -1, ttl, ['1', '2', '3'])
+      await storage.set('ttl-b', -1, ttl, ['1', '4'])
+      await storage.set('ttl-c', -1, ttl, ['1', '4'])
+      await storage.set('ttl-d', -1, ttl, ['4'])
+      await storage.set('ttl-e', -1, ttl, ['2'])
+
+      await sleep(ttl * 1000 + 500)
+
+      t.equal((await storage.store.smembers('r:1')).length, 0)
+      t.equal((await storage.store.smembers('r:2')).length, 0)
+      t.equal((await storage.store.smembers('r:3')).length, 0)
+      t.equal((await storage.store.smembers('r:4')).length, 0)
+    })
 
     test('should not throw on error', async (t) => {
       t.plan(2)
