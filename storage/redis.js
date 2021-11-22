@@ -9,6 +9,7 @@ const { findNotMatching } = require('../util')
  * @typedef StorageRedisOptions
  * @property {!store} client
  * @property {?Logger} log
+ * @property {?boolean} [invalidation=false]
  */
 
 class StorageRedis extends StorageInterface {
@@ -20,15 +21,21 @@ class StorageRedis extends StorageInterface {
     // if (!options.client) {
     //   throw new Error('Redis client is required')
     // }
-    // TODO option disable invalidation, so no need to listen and sync stuff
+    // if (options.invalidation && !options.listener) {
+    //   throw new Error('Redis listener is required with invalidation')
+    // }
     super(options)
     this.options = options
+    this.invalidation = options.invalidation || false
   }
 
   async init () {
     this.log = this.options.log || nullLogger
-
     this.store = this.options.client
+
+    if (!this.invalidation) {
+      return
+    }
 
     // TODO documentation
     await this.listen(this.options.listener)
@@ -53,6 +60,7 @@ class StorageRedis extends StorageInterface {
   }
 
   /**
+   * set value by key
    * @param {string} key
    * @param {*} value
    * @param {number} ttl - ttl in seconds; zero means key will not be stored
@@ -70,7 +78,12 @@ class StorageRedis extends StorageInterface {
     try {
       await this.store.set(key, stringify(value), 'EX', ttl)
 
-      if (!references) { // TODO || !this.options.invalidation
+      if (!references) {
+        return
+      }
+
+      if (!this.invalidation) {
+        this.log.warn({ msg: 'acd/storage/redis.set, invalidation is disabled, references are useless' })
         return
       }
 
@@ -132,7 +145,11 @@ class StorageRedis extends StorageInterface {
    * @returns {string[]} removed keys
    */
   async invalidate (references) {
-    // TODO if(!this.options.invalidation) { return }
+    if (!this.invalidation) {
+      this.log.warn({ msg: 'acd/storage/redis.invalidate, exit due invalidation is disabled' })
+      return []
+    }
+
     this.log.debug({ msg: 'acd/storage/redis.invalidate', references })
 
     try {
@@ -180,6 +197,8 @@ class StorageRedis extends StorageInterface {
 
       const removes = keys.map(key => ['del', key])
       await this.store.pipeline(removes).exec()
+
+      if (!this.invalidation) { return }
       await this.clearReferences(keys)
     } catch (err) {
       this.log.error({ msg: 'acd/storage/redis.clear error', err, name })
@@ -197,21 +216,22 @@ class StorageRedis extends StorageInterface {
   /**
    * listen to redis events for expired and deleted keys
    */
-  async listen (client) {
-    if (!client) {
+  async listen (listener) {
+    if (!listener) {
+      this.log.warn({ msg: 'acd/storage/redis.listen, listener connection is missing' })
       return
     }
 
-    this.listener = client
+    this.listener = listener
 
-    const db = client.options ? (client.options.db || 0) : 0
+    const db = listener.options ? (listener.options.db || 0) : 0
 
     // TODO check "notify-keyspace-events KEA" on redis if possible, or document
 
     try {
       // TODO check listener
       // TODO listen also maxmemory for evicted keys
-      const subscribed = await client.subscribe(`__keyevent@${db}__:expired`)
+      const subscribed = await listener.subscribe(`__keyevent@${db}__:expired`)
       if (subscribed !== 1) {
         throw new Error('cant subscribe to redis')
       }
@@ -225,7 +245,7 @@ class StorageRedis extends StorageInterface {
     // redis-cli config set notify-keyspace-events KEA
     // redis-cli --csv psubscribe '__key*__:*'
 
-    client.on('message', (_channel, key) => {
+    listener.on('message', (_channel, key) => {
       this.clearReferences(key)
     })
   }

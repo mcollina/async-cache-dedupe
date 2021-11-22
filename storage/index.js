@@ -32,8 +32,6 @@ async function createStorage (type, options) {
     await storage.init()
     return storage
   }
-
-  // TODO memory without invalidation
   return new StorageMemory(options)
 }
 

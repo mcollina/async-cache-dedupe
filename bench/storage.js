@@ -1,8 +1,9 @@
 'use strict'
 
 const { hrtime } = require('process')
+const path = require('path')
 const Redis = require('ioredis')
-const createStorage = require('../storage')
+const createStorage = require(path.resolve(__dirname, '../storage'))
 
 // NOTE: this is a very basic benchmarks for tweaking
 // performance is effected by keys and references size
@@ -12,26 +13,28 @@ function ms (ns) {
 }
 
 async function main () {
-  let [,, type, ttl, entries, references, retry, invalidate] = process.argv
+  let [,, type, ttl, entries, references, set, invalidate] = process.argv
 
   ttl = Number(ttl)
-  references = Boolean(references)
-  retry = Boolean(retry)
-  invalidate = Boolean(invalidate)
+  references = references === 'true' || references === '1'
+  set = set === 'true' || set === '1'
+  invalidate = invalidate === 'true' || invalidate === '1'
 
   console.log(`
     type: ${type}
     ttl: ${ttl}
     entries: ${entries}
     references: ${references}
-    retry: ${retry}
+    set: ${set}
     invalidate: ${invalidate}
   `)
 
-  const options = {}
+  const options = {
+    invalidation: invalidate
+  }
 
   if (type === 'redis') {
-    options.client = new Redis()
+    options.client = new Redis({ enableAutoPipelining: true })
   }
 
   let start = hrtime.bigint()
@@ -46,7 +49,7 @@ async function main () {
   end = hrtime.bigint()
   console.log(`set ${entries} entries (ttl: ${!!ttl}, references: ${!!references}) in ${ms(end - start)} ms`)
 
-  if (retry) {
+  if (set) {
     start = hrtime.bigint()
     for (let i = 0; i < entries; i++) {
       await storage.get(`key-${i}`)

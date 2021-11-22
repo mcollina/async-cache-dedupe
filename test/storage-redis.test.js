@@ -43,6 +43,7 @@ test('storage redis', async (t) => {
   test('get', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
     test('should get a value by a key previously stored', async (t) => {
@@ -90,6 +91,7 @@ test('storage redis', async (t) => {
   test('set', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
     test('should set a value, with ttl', async (t) => {
@@ -112,18 +114,33 @@ test('storage redis', async (t) => {
     })
 
     test('should set a value with references', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo', 'bar', 100, ['fooers'])
 
       const value = await storage.store.get('foo')
       t.equal(JSON.parse(value), 'bar')
 
-      const references = await storage.store.smembers('r:fooers')
-      t.same(references, ['foo'])
+      t.same(await storage.store.smembers('r:fooers'), ['foo'])
+    })
+
+    test('should get a warning setting references with invalidation disabled', async (t) => {
+      t.plan(1)
+
+      const storage = await createStorage('redis', {
+        client: redisClient,
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/redis.set, invalidation is disabled, references are useless')
+          }
+        }
+      })
+
+      await storage.set('foo', 'bar', 1, ['fooers'])
     })
 
     test('should not set a references twice', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo', 'bar', 100, ['fooers'])
       await storage.set('foo', 'new-bar', 100, ['fooers'])
 
@@ -135,7 +152,7 @@ test('storage redis', async (t) => {
     })
 
     test('should add a key to an existing reference', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
 
       await storage.set('foo1', 'bar1', 100, ['fooers'])
       await storage.set('foo2', 'bar2', 100, ['fooers'])
@@ -147,7 +164,7 @@ test('storage redis', async (t) => {
     })
 
     test('should update the key references, full replace', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['booers', 'tooers'])
@@ -159,7 +176,7 @@ test('storage redis', async (t) => {
     })
 
     test('should update the key references, partial replace', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['mooers', 'tooers'])
@@ -171,7 +188,7 @@ test('storage redis', async (t) => {
     })
 
     test('should update the key references, partial replace adding more references', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar2', 100, ['z', 'b', 'd'])
@@ -184,7 +201,7 @@ test('storage redis', async (t) => {
     })
 
     test('should update the key references, partial replace with shared reference', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
 
       await storage.set('boo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
@@ -218,11 +235,12 @@ test('storage redis', async (t) => {
   test('remove', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
     test('should remove an existing key', async (t) => {
       const storage = await createStorage('redis', { client: redisClient })
-      await storage.set('foo', 'bar', 10, ['fooers'])
+      await storage.set('foo', 'bar', 10)
 
       await storage.remove('foo')
 
@@ -231,7 +249,7 @@ test('storage redis', async (t) => {
 
     test('should remove an non existing key', async (t) => {
       const storage = await createStorage('redis', { client: redisClient })
-      await storage.set('foo', 'bar', 10, ['fooers'])
+      await storage.set('foo', 'bar', 10)
 
       await storage.remove('fooz')
 
@@ -239,8 +257,33 @@ test('storage redis', async (t) => {
       t.equal(await storage.get('fooz'), undefined)
     })
 
+    test('should remove an existing key and references', async (t) => {
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
+      await storage.set('foo', 'bar', 10, ['fooers'])
+
+      await storage.remove('foo')
+
+      t.equal(await storage.get('foo'), undefined)
+
+      t.same((await storage.store.smembers('r:fooers')).length, 0)
+      t.same((await storage.store.smembers('k:foo')).length, 0)
+    })
+
+    test('should remove an non existing key (and references)', async (t) => {
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
+      await storage.set('foo', 'bar', 10, ['fooers'])
+
+      await storage.remove('fooz')
+
+      t.equal(await storage.get('foo'), 'bar')
+      t.equal(await storage.get('fooz'), undefined)
+
+      t.same(await storage.store.smembers('k:foo'), ['fooers'])
+      t.same(await storage.store.smembers('r:fooers'), ['foo'])
+    })
+
     test('should remove a key but not references if still active', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('a', 1, 10, ['fooers', 'vowels'])
       await storage.set('b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('c', 1, 10, ['fooers', 'consonantes'])
@@ -286,10 +329,11 @@ test('storage redis', async (t) => {
   test('invalidate', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
     test('should remove storage keys by references', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -302,7 +346,7 @@ test('storage redis', async (t) => {
     })
 
     test('should not remove storage keys by not existing reference', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -315,7 +359,7 @@ test('storage redis', async (t) => {
     })
 
     test('should invalide more than one reference at once', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -328,7 +372,7 @@ test('storage redis', async (t) => {
     })
 
     test('should remove storage keys by references, but not the ones still alive', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~boo', 'baz', 1, ['fooers', 'booers'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -351,7 +395,7 @@ test('storage redis', async (t) => {
     })
 
     test('should remove a keys and references and also linked ones', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('a', 1, 10, ['fooers', 'vowels', 'empty'])
       await storage.set('b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('c', 1, 10, ['fooers', 'consonantes'])
@@ -378,10 +422,27 @@ test('storage redis', async (t) => {
       t.same(await storage.store.smembers('k:e'), ['vowels'])
     })
 
+    test('should get a warning with invalidation disabled', async (t) => {
+      t.plan(2)
+
+      const storage = await createStorage('redis', {
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/redis.invalidate, exit due invalidation is disabled')
+          }
+        }
+      })
+
+      t.same(await storage.invalidate(['something']), [])
+    })
+
     test('should not throw on error', async (t) => {
       t.plan(3)
       const storage = await createStorage('redis', {
         client: {},
+        listener: redisListener,
+        invalidation: true,
         log: {
           debug: () => { },
           error: (error) => {
@@ -398,10 +459,21 @@ test('storage redis', async (t) => {
   test('clear', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
-    test('should clear the whole storage', async (t) => {
+    test('should clear the whole storage (invalidation disabled)', async (t) => {
       const storage = await createStorage('redis', { client: redisClient })
+      await storage.set('foo', 'bar', 10)
+      await storage.set('baz', 'buz', 10)
+
+      await storage.clear()
+
+      t.equal(await storage.store.dbsize(), 0)
+    })
+
+    test('should clear the whole storage (invalidation enabled)', async (t) => {
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('foo', 'bar', 10, ['fooers'])
       await storage.set('baz', 'buz', 10, ['bazers'])
 
@@ -412,9 +484,9 @@ test('storage redis', async (t) => {
 
     test('should clear only keys with common name', async (t) => {
       const storage = await createStorage('redis', { client: redisClient })
-      await storage.set('foo~1', 'bar', 10, ['fooers'])
-      await storage.set('foo~2', 'baz', 10, ['bazers'])
-      await storage.set('boo~1', 'fiz', 10, ['booers'])
+      await storage.set('foo~1', 'bar', 10)
+      await storage.set('foo~2', 'baz', 10)
+      await storage.set('boo~1', 'fiz', 10)
 
       await storage.clear('foo~')
 
@@ -424,7 +496,7 @@ test('storage redis', async (t) => {
     })
 
     test('should clear a keys and their references', async (t) => {
-      const storage = await createStorage('redis', { client: redisClient })
+      const storage = await createStorage('redis', { client: redisClient, listener: redisListener, invalidation: true })
       await storage.set('a-a', 1, 10, ['fooers', 'vowels', 'empty'])
       await storage.set('a-b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('a-c', 1, 10, ['fooers', 'consonantes'])
@@ -471,6 +543,7 @@ test('storage redis', async (t) => {
   test('refresh', async (t) => {
     beforeEach(async () => {
       await redisClient.flushall()
+      redisListener.removeAllListeners()
     })
 
     test('should start a new storage', async (t) => {
@@ -514,7 +587,7 @@ test('storage redis', async (t) => {
         }
       }
 
-      await createStorage('redis', { client: redisClient, listener })
+      await createStorage('redis', { client: redisClient, listener, invalidation: true })
     })
 
     test('should use the db 0 as default #1', async (t) => {
@@ -531,7 +604,7 @@ test('storage redis', async (t) => {
         }
       }
 
-      await createStorage('redis', { client: redisClient, listener })
+      await createStorage('redis', { client: redisClient, listener, invalidation: true })
     })
 
     test('should use the db 0 as default #2', async (t) => {
@@ -549,7 +622,7 @@ test('storage redis', async (t) => {
         }
       }
 
-      await createStorage('redis', { client: redisClient, listener })
+      await createStorage('redis', { client: redisClient, listener, invalidation: true })
     })
 
     test('should throw error if cant subscribe for listen #1', async (t) => {
@@ -559,7 +632,7 @@ test('storage redis', async (t) => {
       }
 
       try {
-        await createStorage('redis', { client: redisClient, listener })
+        await createStorage('redis', { client: redisClient, listener, invalidation: true })
         t.fail('must throw error')
       } catch (err) {
         t.equal(err.message, 'cant listen')
@@ -573,7 +646,7 @@ test('storage redis', async (t) => {
       }
 
       try {
-        await createStorage('redis', { client: redisClient, listener })
+        await createStorage('redis', { client: redisClient, listener, invalidation: true })
         t.fail('must throw error')
       } catch (err) {
         t.equal(err.message, 'cant subscribe to redis')
@@ -588,11 +661,26 @@ test('storage redis', async (t) => {
         on: (_event, cb) => { event = cb }
       }
 
-      const storage = await createStorage('redis', { client: redisClient, listener })
+      const storage = await createStorage('redis', { client: redisClient, listener, invalidation: true })
       sinon.spy(storage, 'clearReferences')
 
       event('the-channel', 'the-key')
       t.ok(storage.clearReferences.calledOnceWith('the-key'))
+    })
+
+    test('should not listen if second connection is missing', async (t) => {
+      t.plan(1)
+
+      await createStorage('redis', {
+        client: redisClient,
+        invalidation: true,
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/redis.listen, listener connection is missing')
+          }
+        }
+      })
     })
   })
 

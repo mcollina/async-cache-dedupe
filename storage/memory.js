@@ -11,6 +11,7 @@ const DEFAULT_CACHE_SIZE = 1024
  * @typedef StorageMemoryOptions
  * @property {?number} [size=1024]
  * @property {?Logger} [log]
+ * @property {?boolean} [invalidation=false]
  */
 
 class StorageMemory extends StorageInterface {
@@ -23,16 +24,21 @@ class StorageMemory extends StorageInterface {
     super(options)
     this.size = options.size || DEFAULT_CACHE_SIZE
     this.log = options.log || nullLogger
+    this.invalidation = options.invalidation || false
 
     this.init()
   }
 
   init () {
     this.store = new LRUCache(this.size)
+
+    if (!this.invalidation) {
+      return
+    }
     // key -> references, keys are strings, references are sorted array strings
     // TODO use a btree instead of array to speed up writes? do benchmarks before
     this.keysReferences = new Map()
-    // same as above, bunt inverted
+    // same as above, but inverted
     this.referencesKeys = new Map()
   }
 
@@ -82,6 +88,11 @@ class StorageMemory extends StorageInterface {
     }
 
     if (!references) {
+      return
+    }
+
+    if (!this.invalidation) {
+      this.log.warn({ msg: 'acd/storage/memory.set, invalidation is disabled, references are useless' })
       return
     }
 
@@ -168,6 +179,9 @@ class StorageMemory extends StorageInterface {
    * @param {string[]} keys
    */
   _removeReferences (keys) {
+    if (!this.invalidation) {
+      return
+    }
     this.log.debug({ msg: 'acd/storage/memory._removeReferences', keys })
 
     const referencesToRemove = new Set()
@@ -231,6 +245,11 @@ class StorageMemory extends StorageInterface {
    * @returns {string[]} removed keys
    */
   async invalidate (references) {
+    if (!this.invalidation) {
+      this.log.warn({ msg: 'acd/storage/memory.invalidate, exit due invalidation is disabled' })
+      return []
+    }
+
     this.log.debug({ msg: 'acd/storage/memory.invalidate', references })
 
     const removed = []
@@ -269,7 +288,9 @@ class StorageMemory extends StorageInterface {
 
     if (!name) {
       this.store.clear()
+      if (!this.invalidation) { return }
       this.referencesKeys.clear()
+      this.keysReferences.clear()
       return
     }
 

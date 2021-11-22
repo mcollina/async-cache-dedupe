@@ -21,6 +21,20 @@ test('storage memory', async (t) => {
     t.equal(storage.store.capacity, 1024)
   })
 
+  test('should not initialize references containeres on invalidation disabled', async (t) => {
+    const storage = await createStorage('memory')
+
+    t.equal(storage.keysReferences, undefined)
+    t.equal(storage.referencesKeys, undefined)
+  })
+
+  test('should initialize references containeres on invalidation enabled', async (t) => {
+    const storage = await createStorage('memory', { invalidation: true })
+
+    t.ok(typeof storage.keysReferences === 'object')
+    t.ok(typeof storage.referencesKeys === 'object')
+  })
+
   test('get', async (t) => {
     test('should get a value by a key previously stored', async (t) => {
       const storage = await createStorage('memory')
@@ -69,7 +83,7 @@ test('storage memory', async (t) => {
     })
 
     test('should set a value with references', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('foo', 'bar', 100, ['fooers'])
 
@@ -79,8 +93,23 @@ test('storage memory', async (t) => {
       t.same(storage.keysReferences.get('foo'), ['fooers'])
     })
 
+    test('should get a warning setting references with invalidation disabled', async (t) => {
+      t.plan(1)
+
+      const storage = await createStorage('memory', {
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/memory.set, invalidation is disabled, references are useless')
+          }
+        }
+      })
+
+      await storage.set('foo', 'bar', 1, ['fooers'])
+    })
+
     test('should not set a references twice', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo', 'bar', 1, ['fooers'])
       await storage.set('foo', 'new-bar', 1, ['fooers'])
 
@@ -91,7 +120,7 @@ test('storage memory', async (t) => {
     })
 
     test('should add a key to an existing reference', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('foo1', 'bar1', 1, ['fooers'])
       await storage.set('foo2', 'bar2', 1, ['fooers'])
@@ -102,7 +131,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update the key references, full replace', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['booers', 'tooers'])
@@ -116,7 +145,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update the key references, partial replace', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['mooers', 'tooers'])
@@ -129,7 +158,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update the key references, partial replace adding more references', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar2', 100, ['z', 'b', 'd'])
@@ -143,7 +172,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update the key references, partial replace with shared reference', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('boo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
@@ -158,7 +187,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update the key references, add reference to existing key without them', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
 
       await storage.set('key1', {}, 2)
       await storage.set('key1', 'another value', 2, ['a', 'b', 'c'])
@@ -171,7 +200,7 @@ test('storage memory', async (t) => {
     })
 
     test('should update references of evicted keys (removed by size)', async (t) => {
-      const storage = await createStorage('memory', { size: 2 })
+      const storage = await createStorage('memory', { size: 2, invalidation: true })
 
       await storage.set('foo1', 'a', 100, ['foo:1', 'fooers'])
       await storage.set('foo2', 'b', 100, ['foo:2', 'fooers'])
@@ -195,7 +224,7 @@ test('storage memory', async (t) => {
   test('remove', async (t) => {
     test('should remove an existing key', async (t) => {
       const storage = await createStorage('memory')
-      await storage.set('foo', 'bar', 10, ['fooers'])
+      await storage.set('foo', 'bar', 10)
 
       t.equal(await storage.remove('foo'), true)
 
@@ -204,6 +233,25 @@ test('storage memory', async (t) => {
 
     test('should remove an non existing key', async (t) => {
       const storage = await createStorage('memory')
+      await storage.set('foo', 'bar', 10)
+
+      t.equal(await storage.remove('fooz'), false)
+
+      t.equal(await storage.get('foo'), 'bar')
+      t.equal(await storage.get('fooz'), undefined)
+    })
+
+    test('should remove an existing key and references', async (t) => {
+      const storage = await createStorage('memory', { invalidation: true })
+      await storage.set('foo', 'bar', 10, ['fooers'])
+
+      t.equal(await storage.remove('foo'), true)
+
+      t.equal(await storage.get('foo'), undefined)
+    })
+
+    test('should remove an non existing key (and references)', async (t) => {
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo', 'bar', 10, ['fooers'])
 
       t.equal(await storage.remove('fooz'), false)
@@ -213,7 +261,7 @@ test('storage memory', async (t) => {
     })
 
     test('should remove a key but not references if still active', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('a', 1, 10, ['fooers', 'vowels'])
       await storage.set('b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('c', 1, 10, ['fooers', 'consonantes'])
@@ -242,7 +290,7 @@ test('storage memory', async (t) => {
 
   test('invalidate', async (t) => {
     test('should remove storage keys by references', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -266,7 +314,7 @@ test('storage memory', async (t) => {
     })
 
     test('should not remove storage keys by not existing reference', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -281,7 +329,7 @@ test('storage memory', async (t) => {
     })
 
     test('should invalide more than one reference at once', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -296,7 +344,7 @@ test('storage memory', async (t) => {
     })
 
     test('should remove storage keys by references, but not the ones still alive', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
       await storage.set('foo~boo', 'baz', 1, ['fooers', 'booers'])
       await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
@@ -319,7 +367,7 @@ test('storage memory', async (t) => {
     })
 
     test('should remove a keys and references and also linked ones', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('a', 1, 10, ['fooers', 'vowels', 'empty'])
       await storage.set('b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('c', 1, 10, ['fooers', 'consonantes'])
@@ -345,11 +393,36 @@ test('storage memory', async (t) => {
       t.same(storage.keysReferences.get('d'), ['consonantes'])
       t.same(storage.keysReferences.get('e'), ['vowels'])
     })
+
+    test('should get a warning with invalidation disabled', async (t) => {
+      t.plan(2)
+
+      const storage = await createStorage('memory', {
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/memory.invalidate, exit due invalidation is disabled')
+          }
+        }
+      })
+
+      t.same(await storage.invalidate(['something']), [])
+    })
   })
 
   test('clear', async (t) => {
-    test('should clear the whole storage', async (t) => {
+    test('should clear the whole storage (invalidation disabled)', async (t) => {
       const storage = await createStorage('memory')
+      await storage.set('foo', 'bar', 10)
+      await storage.set('baz', 'buz', 10)
+
+      await storage.clear()
+
+      t.equal(storage.store.size, 0)
+    })
+
+    test('should clear the whole storage (invalidation enabled)', async (t) => {
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo', 'bar', 10, ['fooers'])
       await storage.set('baz', 'buz', 10, ['bazers'])
 
@@ -357,13 +430,14 @@ test('storage memory', async (t) => {
 
       t.equal(storage.store.size, 0)
       t.equal(storage.referencesKeys.size, 0)
+      t.equal(storage.keysReferences.size, 0)
     })
 
     test('should clear only keys with common name', async (t) => {
       const storage = await createStorage('memory')
-      await storage.set('foo~1', 'bar', 10, ['fooers'])
-      await storage.set('foo~2', 'baz', 10, ['bazers'])
-      await storage.set('boo~1', 'fiz', 10, ['booers'])
+      await storage.set('foo~1', 'bar', 10)
+      await storage.set('foo~2', 'baz', 10)
+      await storage.set('boo~1', 'fiz', 10)
 
       await storage.clear('foo~')
 
@@ -373,7 +447,7 @@ test('storage memory', async (t) => {
     })
 
     test('should clear a keys and their references', async (t) => {
-      const storage = await createStorage('memory')
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('a-a', 1, 10, ['fooers', 'vowels', 'empty'])
       await storage.set('a-b', 1, 10, ['fooers', 'consonantes'])
       await storage.set('a-c', 1, 10, ['fooers', 'consonantes'])
@@ -404,10 +478,19 @@ test('storage memory', async (t) => {
   test('refresh', async (t) => {
     test('should start a new storage', async (t) => {
       const storage = await createStorage('memory')
+      await storage.set('foo', 'bar', 10)
+
+      await storage.refresh()
+      t.equal(storage.store.size, 0)
+    })
+
+    test('should start a new storage (invalidation enabled)', async (t) => {
+      const storage = await createStorage('memory', { invalidation: true })
       await storage.set('foo', 'bar', 10, ['fooers'])
 
       await storage.refresh()
       t.equal(storage.store.size, 0)
+      t.equal(storage.referencesKeys.size, 0)
       t.equal(storage.referencesKeys.size, 0)
     })
   })
