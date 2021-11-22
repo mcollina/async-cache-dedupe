@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "abstract-logging": "^2.0.1",
-    "mnemonist": "^0.38.5",
+    "mnemonist": "^0.39.0",
     "safe-stable-stringify": "^2.2.0"
   },
   "standard": {
