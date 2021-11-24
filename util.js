@@ -48,10 +48,11 @@ function findNotMatching (arrayA, arrayB) {
  * @return {number} index of value in array, -1 if not found
  */
 function bsearchIndex (array, value) {
-  let start = 0; let end = array.length - 1
+  let start = 0
+  let end = array.length - 1
 
   while (start <= end) {
-    const index = Math.floor((start + end) / 2)
+    const index = ((start + end) / 2) | 0
 
     if (array[index] === value) {
       return index
@@ -67,8 +68,13 @@ function bsearchIndex (array, value) {
   return -1
 }
 
+function randomElement (array) {
+  return array[Math.random() * array.length | 0]
+}
+
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
-  bsearchIndex
+  bsearchIndex,
+  randomElement
 }

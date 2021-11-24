@@ -3,7 +3,7 @@
 const stringify = require('safe-stable-stringify')
 const nullLogger = require('abstract-logging')
 const StorageInterface = require('./interface')
-const { findNotMatching } = require('../util')
+const { findNotMatching, randomElement } = require('../util')
 
 /**
  * @typedef StorageRedisOptions
@@ -16,7 +16,7 @@ class StorageRedis extends StorageInterface {
   /**
    * @param {StorageRedisOptions} options
    */
-  constructor (options) {
+  constructor(options) {
     // TODO validate options
     // if (!options.client) {
     //   throw new Error('Redis client is required')
@@ -29,7 +29,7 @@ class StorageRedis extends StorageInterface {
     this.invalidation = options.invalidation || false
   }
 
-  async init () {
+  async init() {
     this.log = this.options.log || nullLogger
     this.store = this.options.client
 
@@ -37,20 +37,25 @@ class StorageRedis extends StorageInterface {
       return
     }
 
-    // TODO documentation
-    await this.listen(this.options.listener)
+    // TODO drop
+    // await this.listen(this.options.listener)
+    // this.options.invalidation.clear
+    this.heuristicClean()
   }
 
   /**
    * @param {string} key
    * @returns {undefined|*} undefined if key not found
    */
-  async get (key) {
+  async get(key) {
     this.log.debug({ msg: 'acd/storage/redis.get', key })
 
     try {
       const value = await this.store.get(key)
       if (!value) {
+        // TODO test
+        // clear references because the key could be expired (or evicted)
+        this.clearReferences(key)
         return undefined
       }
       return JSON.parse(value)
@@ -66,7 +71,7 @@ class StorageRedis extends StorageInterface {
    * @param {number} ttl - ttl in seconds; zero means key will not be stored
    * @param {?string[]} references
    */
-  async set (key, value, ttl, references) {
+  async set(key, value, ttl, references) {
     // TODO can keys contains * or so?
     this.log.debug({ msg: 'acd/storage/redis.set key', key, value, ttl, references })
 
@@ -129,7 +134,7 @@ class StorageRedis extends StorageInterface {
    * @param {string} key
    * @returns {boolean} indicates if key was removed
    */
-  async remove (key) {
+  async remove(key) {
     this.log.debug({ msg: 'acd/storage/redis.remove', key })
     try {
       const removed = await this.store.del(key) > 0
@@ -144,7 +149,7 @@ class StorageRedis extends StorageInterface {
    * @param {string[]} references
    * @returns {string[]} removed keys
    */
-  async invalidate (references) {
+  async invalidate(references) {
     if (!this.invalidation) {
       this.log.warn({ msg: 'acd/storage/redis.invalidate, exit due invalidation is disabled' })
       return []
@@ -183,7 +188,7 @@ class StorageRedis extends StorageInterface {
   /**
    * @param {string} name
    */
-  async clear (name) {
+  async clear(name) {
     this.log.debug({ msg: 'acd/storage/redis.clear', name })
 
     try {
@@ -205,7 +210,7 @@ class StorageRedis extends StorageInterface {
     }
   }
 
-  async refresh () {
+  async refresh() {
     try {
       await this.store.flushall()
     } catch (err) {
@@ -214,47 +219,100 @@ class StorageRedis extends StorageInterface {
   }
 
   /**
-   * listen to redis events for expired and deleted keys
+   * TODO DOC!!!
+   * options.invalidation.clear.minInterval min interval between two clear operations, default 1 sec
+   * options.invalidation.clear.maxInterval min interval between two clear operations, default 10 sec
+   * options.invalidation.clear.maxTime heuristic max time to full clear the dangling references
    */
-  async listen (listener) {
-    if (!listener) {
-      this.log.warn({ msg: 'acd/storage/redis.listen, listener connection is missing' })
+  heuristicClean({ start = false, interval, lastCursor, retrieves = 10 } = {}) {
+    this.log.debug({ msg: 'acd/storage/redis.heuristicClean' })
+
+    if (start) {
+      this._cleanTimer = setTimeout(() => { this.heuristicClean() }, this.options.invalidation.clear.minInterval)
       return
     }
 
-    this.listener = listener
+    // get keys->references count
+    const [cursor, keys] = await this.store.sscan(lastCursor || 0, 'match', 'k:*', 'count', retrieves)
 
-    const db = listener.options ? (listener.options.db || 0) : 0
+    this.log.debug({ msg: 'acd/storage/redis.heuristicClean sscan', cursor, keys })
 
-    // TODO check "notify-keyspace-events KEA" on redis if possible, or document
-
-    try {
-      // TODO check listener
-      // TODO listen also maxmemory for evicted keys
-      const subscribed = await listener.subscribe(`__keyevent@${db}__:expired`)
-      if (subscribed !== 1) {
-        throw new Error('cant subscribe to redis')
-      }
-    } catch (err) {
-      this.log.error({ msg: 'acd/storage/redis.listen error on redis subscribe', err })
-      throw err
+    if(keys.length < 1) {
+      setTimeout(() => { this.heuristicClean() }, this.options.invalidation.clear.minInterval)
     }
 
-    // TODO document this
-    // @see https://redis.io/topics/notifications
-    // redis-cli config set notify-keyspace-events KEA
-    // redis-cli --csv psubscribe '__key*__:*'
+    if (cursor === 0 && lastCursor) {
+      // made a "full iteration", so it means the keys count
+      // see https://redis.io/commands/scan
+      // assuming all keys will expire in maxTime
+      interval = (lastCursor + keys.length) / this.options.invalidation.clear.maxTime
+      // cap interval
+      interval = Math.max(this.options.invalidation.clear.minInterval, Math.min(this.options.invalidation.clear.maxInterval, interval))
+    }
 
-    listener.on('message', (_channel, key) => {
+    let key = randomElement(keys)
+    key = key.substr(2) // remove 'k:'
+    this.log.debug({ msg: 'acd/storage/redis.heuristicClean picked', key })
+    const exists = await this.store.get(key)
+
+    // if not exists -> found a dangling reference
+    if (exists) {
+      this.log.debug({ msg: 'acd/storage/redis.heuristicClean clear', key })
+      // note: no await
       this.clearReferences(key)
-    })
+    }
+
+    // polling every "interval" until next full sscan iteration
+    this._cleanTimer = setTimeout(() => { this.heuristicClean({ lastCursor: cursor, interval }) }, interval || this.options.invalidation.clear.minInterval)
   }
+
+  heuristicCleanStop() {
+    if (!this._cleanTimer) {
+      return
+    }
+    clearTimeout(this._cleanTimer)
+    this._cleanTimer = null
+  }
+
+  // async listen (listener) {
+  //   if (!listener) {
+  //     this.log.warn({ msg: 'acd/storage/redis.listen, listener connection is missing' })
+  //     return
+  //   }
+
+  //   this.listener = listener
+
+  //   const db = listener.options ? (listener.options.db || 0) : 0
+
+  //   // TODO check "notify-keyspace-events KEA" on redis if possible, or document
+
+  //   try {
+  //     // TODO check listener
+  //     // TODO listen also maxmemory for evicted keys
+  //     const subscribed = await listener.subscribe(`__keyevent@${db}__:expired`)
+  //     if (subscribed !== 1) {
+  //       throw new Error('cant subscribe to redis')
+  //     }
+  //   } catch (err) {
+  //     this.log.error({ msg: 'acd/storage/redis.listen error on redis subscribe', err })
+  //     throw err
+  //   }
+
+  //   // TODO document this
+  //   // @see https://redis.io/topics/notifications
+  //   // redis-cli config set notify-keyspace-events KEA
+  //   // redis-cli --csv psubscribe '__key*__:*'
+
+  //   listener.on('message', (_channel, key) => {
+  //     this.clearReferences(key)
+  //   })
+  // }
 
   /**
    * note: does not throw on error
    * @param {string|string[]} keys
    */
-  async clearReferences (keys) {
+  async clearReferences(keys) {
     try {
       if (!Array.isArray(keys)) { keys = [keys] }
 
