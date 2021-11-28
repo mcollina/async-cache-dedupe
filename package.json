@@ -4,7 +4,8 @@
   "description": "An async deduping cache",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test/*test.js"
+    "test": "standard | snazzy && tap test/*test.js",
+    "lint:fix": "standard --fix"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",
     "ioredis": "^4.28.0",
-    "sinon": "^12.0.1",
     "snazzy": "^9.0.0",
     "standard": "^16.0.4",
     "tap": "^15.0.10"

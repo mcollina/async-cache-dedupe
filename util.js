@@ -68,13 +68,13 @@ function bsearchIndex (array, value) {
   return -1
 }
 
-function randomElement (array) {
-  return array[Math.random() * array.length | 0]
-}
+// function randomElement (array) {
+//   return array[Math.random() * array.length | 0]
+// }
 
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
-  bsearchIndex,
-  randomElement
+  bsearchIndex
+  // randomElement
 }
