@@ -3,7 +3,7 @@
 const stringify = require('safe-stable-stringify')
 const nullLogger = require('abstract-logging')
 const StorageInterface = require('../interface')
-const { findNotMatching } = require('../../util')
+const { findNotMatching, randomSubset } = require('../../util')
 
 const GC_DEFAULT_CHUNK = 64
 const GC_DEFAULT_LAZY_CHUNK = 64
@@ -277,7 +277,7 @@ class StorageRedis extends StorageInterface {
    * @param {number} [options.chunk=64] number of references to retrieve at once
    * @param {number|undefined} [options.lazy.cursor] cursor to start the scan; should be last cursor returned by scan; default start from the beginning
    * @param {number} [options.lazy.chunk=64] number of references to check per gc cycle
-   * @return {Object} stats TODO
+   * @return {Object} stats TODO + error
    *
    * TODO doc: a good strategy is 1 strict gc every N lazy gc
    * TODO doc: conseguences of dirty references (measure slowdown?)
@@ -294,49 +294,61 @@ class StorageRedis extends StorageInterface {
 
     const chunk = options.chunk || GC_DEFAULT_CHUNK
     const optionsLazy = options.lazy || {}
-    // max > 1
-    const lazyChunk = optionsLazy.max || GC_DEFAULT_LAZY_CHUNK
+    const lazyChunk = optionsLazy.chunk || GC_DEFAULT_LAZY_CHUNK
     let cursor = optionsLazy.cursor || 0
     const startingCursor = cursor
-    const scanCount = Math.min(lazyChunk, chunk)
-    // let count = 0
+    const scanCount = Math.max(Math.min(lazyChunk, chunk), 1)
+
+    const report = {
+      references: { scanned: [], removed: [] },
+      keys: { scanned: new Set(), removed: new Set() },
+      loops: 0,
+      cursor: 0,
+      error: null
+    }
 
     try {
-      let referencesLength = -1
+      let lastScanLength = -1
       let lastRemoved = -1
       do {
+        report.loops++
+
         const scan = await this.store.scan(cursor, 'match', 'r:*', 'count', scanCount)
         cursor = Number(scan[0])
-        const references = scan[1]
-        referencesLength = references.length
+        lastScanLength = scan[1].length
 
-        // TODO if mode === 'lazy'
-        // references = randomSubset(references, lazyChunk)
-        // update stats
+        const references = mode === 'lazy'
+          ? randomSubset(scan[1], lazyChunk)
+          : scan[1]
 
-        // this.log.debug({ msg: 'acd/storage/redis.gc scan references', references })
+        report.references.scanned = report.references.scanned.concat(references)
 
         let reads = []
         for (let i = 0; i < references.length; i++) {
           const reference = references[i]
           reads.push(['smembers', reference])
         }
-        let keys = await this.store.pipeline(reads).exec()
+        const referencesKeys = await this.store.pipeline(reads).exec()
 
         const keysMap = {}
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i]
-          for (let j = 0; j < key[1].length; j++) {
-            const k = key[1][j]
-            if (!keysMap[k]) {
-              keysMap[k] = [references[i]]
+        const referencesKeysMap = {}
+        for (let i = 0; i < referencesKeys.length; i++) {
+          const keys = referencesKeys[i]
+          const reference = references[i]
+          referencesKeysMap[reference] = keys[1]
+          for (let j = 0; j < keys[1].length; j++) {
+            const key = keys[1][j]
+            if (!keysMap[key]) {
+              keysMap[key] = [reference]
             } else {
-              keysMap[k].push(references[i])
+              keysMap[key].push(reference)
             }
+
+            report.keys.scanned.add(key)
           }
         }
 
-        keys = Object.keys(keysMap)
+        const keys = Object.keys(keysMap)
         reads = keys.map(key => ['exists', key])
         const existingKeys = await this.store.pipeline(reads).exec()
 
@@ -352,6 +364,8 @@ class StorageRedis extends StorageInterface {
             } else {
               removingKeys[reference].push(key)
             }
+
+            report.keys.removed.add(key)
           }
         }
 
@@ -359,25 +373,32 @@ class StorageRedis extends StorageInterface {
         const writes = []
         for (let i = 0; i < writeReferences.length; i++) {
           const reference = writeReferences[i]
-          writes.push(['srem', reference, removingKeys[reference]])
+          if (referencesKeysMap[reference].length === removingKeys[reference].length) {
+            writes.push(['del', reference])
+            report.references.removed.push(reference)
+          } else {
+            writes.push(['srem', reference, removingKeys[reference]])
+          }
         }
         await this.store.pipeline(writes).exec()
         lastRemoved = writes.length
 
-        // TODO
-        // if (mode === 'lazy' && count >= lazyChunk) {
-        //   break
-        // }
+        if (mode === 'lazy' && report.references.scanned.length >= lazyChunk) {
+          break
+        }
 
         // cursor = 0 means scan made a "full iteration", so it scanned all the references
         // see https://redis.io/commands/scan
-      } while ((startingCursor === cursor || cursor === 0) && referencesLength > 0 && lastRemoved > 0)
+      } while ((startingCursor !== cursor || cursor === 0) && lastScanLength > 0 && lastRemoved > 0)
 
-      return { cursor } // TODO return stats (scanned references, removed keys, loops)
+      report.cursor = cursor
+      report.keys.scanned = Array.from(report.keys.scanned)
+      report.keys.removed = Array.from(report.keys.removed)
     } catch (err) {
       this.log.error({ msg: 'acd/storage/redis.gc error', err })
-      throw err
+      report.error = err
     }
+    return report
   }
 }
 

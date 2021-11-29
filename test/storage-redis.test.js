@@ -638,6 +638,47 @@ test('storage redis', async (t) => {
   })
 
   test('gc', async (t) => {
+    test('should get a warning calling on disabled invalidation', async (t) => {
+      t.plan(1)
+      const storage = await createStorage('redis', {
+        client: {},
+        log: {
+          debug: () => { },
+          warn: (error) => {
+            t.equal(error.msg, 'acd/storage/redis.gc does not run due to invalidation is disabled')
+          }
+        }
+      })
+
+      storage.gc()
+    })
+
+    test('should not throw on error', async (t) => {
+      t.plan(2)
+      const storage = await createStorage('redis', {
+        client: null,
+        invalidation: true,
+        log: {
+          debug: () => { },
+          warn: () => { },
+          error: (error) => {
+            t.equal(error.msg, 'acd/storage/redis.gc error')
+          }
+        }
+      })
+
+      t.doesNotThrow(() => storage.gc())
+    })
+
+    test('should get error in report', async (t) => {
+      const storage = await createStorage('redis', {
+        client: null,
+        invalidation: true
+      })
+
+      t.ok((await storage.gc()).error instanceof Error)
+    })
+
     test('strict mode', async (t) => {
       test('should remove expired keys references', async (t) => {
         const storage = await createStorage('redis', { client: redisClient, invalidation: true })
@@ -658,15 +699,117 @@ test('storage redis', async (t) => {
         t.equal((await storage.store.smembers('k:d')).length, 0)
 
         t.same((await storage.store.smembers('r:vowels')), ['e'])
-        t.equal((await storage.store.smembers('r:fooers')).length, 0)
-        t.equal((await storage.store.smembers('r:empty')).length, 0)
-        t.equal((await storage.store.smembers('r:consonantes')).length, 0)
+        t.equal(await storage.store.exists('r:fooers'), 0)
+        t.equal(await storage.store.exists('r:empty'), 0)
+        t.equal(await storage.store.exists('r:consonantes'), 0)
       })
 
-      // TODO test
+      test('should run a gc without cleaning', async (t) => {
+        const storage = await createStorage('redis', { client: redisClient, invalidation: true })
+        await storage.set('a', 'value', 60, ['fooers', 'vowels', 'empty'])
+        await storage.set('b', 'value', 60, ['fooers', 'consonantes'])
+        await storage.set('c', 'value', 60, ['fooers', 'consonantes'])
+        await storage.set('d', 'value', 60, ['consonantes'])
+        await storage.set('e', 'value', 60, ['vowels'])
+
+        await sleep(500)
+
+        await storage.gc('strict')
+
+        assertInclude(t, await storage.store.smembers('k:a'), ['fooers', 'vowels', 'empty'])
+        assertInclude(t, await storage.store.smembers('k:b'), ['fooers', 'consonantes'])
+        assertInclude(t, await storage.store.smembers('k:c'), ['fooers', 'consonantes'])
+        t.same(await storage.store.smembers('k:d'), ['consonantes'])
+        t.same(await storage.store.smembers('k:e'), ['vowels'])
+
+        assertInclude(t, await storage.store.smembers('r:vowels'), ['a', 'e'])
+        assertInclude(t, await storage.store.smembers('r:fooers'), ['a', 'b', 'c'])
+        assertInclude(t, await storage.store.smembers('r:consonantes'), ['b', 'c', 'd'])
+        t.same(await storage.store.smembers('r:empty'), ['a'])
+      })
+
+      test('should get stats on full gc', async (t) => {
+        const storage = await createStorage('redis', { client: redisClient, invalidation: true })
+        for (let i = 0; i < 100; i++) {
+          const references = ['keys', `key${i}`]
+          if (i % 2) {
+            references.push('odds')
+          } else {
+            references.push('evens')
+          }
+          await storage.set(`key${i}`, 'value', 1, references)
+        }
+
+        await sleep(1500)
+
+        const report = await storage.gc('strict', { chunk: 10 })
+
+        t.same(report.references.scanned.length, 103)
+        t.same(report.references.removed.length, 103)
+        t.same(report.keys.scanned.length, 100)
+        t.same(report.keys.removed.length, 100)
+        t.same(report.cursor, 0)
+        t.same(report.loops, 12)
+        t.same(report.error, null)
+      })
+
+      test('should run on an empty storage', async (t) => {
+        const storage = await createStorage('redis', { client: redisClient, invalidation: true })
+
+        const report = await storage.gc('strict', { chunk: 10 })
+
+        t.same(report.references.scanned.length, 0)
+        t.same(report.references.removed.length, 0)
+        t.same(report.keys.scanned.length, 0)
+        t.same(report.keys.removed.length, 0)
+        t.same(report.cursor, 0)
+        t.same(report.loops, 1)
+        t.same(report.error, null)
+      })
     })
 
     test('lazy mode', async (t) => {
+      test('should get stats on lazy run', async (t) => {
+        const storage = await createStorage('redis', { client: redisClient, invalidation: true })
+        for (let i = 0; i < 100; i++) {
+          const references = ['keys', `key${i}`]
+          if (i % 2) {
+            references.push('odds')
+          } else {
+            references.push('evens')
+          }
+          await storage.set(`key${i}`, 'value', 1, references)
+        }
+
+        await sleep(1500)
+        const chunk = 20
+
+        const report = await storage.gc('lazy', { lazy: { chunk } })
+
+        t.ok(report.references.scanned.length > chunk)
+        t.equal(report.references.removed.length, report.references.scanned.length)
+        t.not(report.cursor, 0)
+        t.ok(report.loops > 1)
+        t.same(report.error, null)
+      })
+
+      test('should run on an empty storage', async (t) => {
+        const storage = await createStorage('redis', { client: redisClient, invalidation: true })
+
+        const report = await storage.gc('lazy')
+
+        t.same(report.references.scanned.length, 0)
+        t.same(report.references.removed.length, 0)
+        t.same(report.keys.scanned.length, 0)
+        t.same(report.keys.removed.length, 0)
+        t.same(report.cursor, 0)
+        t.same(report.loops, 1)
+        t.same(report.error, null)
+      })
+
+      test('should clean the storage after in some runs', async (t) => {
+        // TODO
+      })
     })
   })
 })

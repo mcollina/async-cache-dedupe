@@ -68,13 +68,36 @@ function bsearchIndex (array, value) {
   return -1
 }
 
-// function randomElement (array) {
-//   return array[Math.random() * array.length | 0]
-// }
+function randomNumber (max) {
+  return (max * Math.random()) | 0
+}
+
+function randomInRange (min, max) {
+  min = Math.floor(min)
+  max = Math.floor(max)
+  return min + randomNumber(1 + max - min)
+}
+
+function randomSubset (array, size) {
+  if (array.length < 1 || size < 1) return []
+
+  const limit = Math.min(array.length, size)
+  const n = randomInRange(1, limit)
+  const indexes = new Set()
+  for (let i = 0; i < n; i++) {
+    indexes.add(randomNumber(array.length))
+  }
+  const result = []
+  for (const i of indexes) {
+    result.push(array[i])
+  }
+
+  return result
+}
 
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
-  bsearchIndex
-  // randomElement
+  bsearchIndex,
+  randomSubset
 }
