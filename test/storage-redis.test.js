@@ -791,7 +791,7 @@ test('storage redis', async (t) => {
         t.equal(report.keys.scanned.length, 100)
         t.equal(report.keys.removed.length, 100)
         t.equal(report.cursor, 0)
-        t.ok(report.loops === 11 || report.loops === 12)
+        t.ok(report.loops > 10)
         t.equal(report.error, null)
       })
 
