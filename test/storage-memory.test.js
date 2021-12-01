@@ -97,6 +97,17 @@ test('storage memory', async (t) => {
       t.same(storage.keysReferences.get('foo'), ['fooers'])
     })
 
+    test('should not set an empty references', async (t) => {
+      const storage = createStorage('memory', { invalidation: true })
+
+      await storage.set('foo', 'bar', 100, [])
+
+      const stored = storage.store.get('foo')
+      t.equal(stored.value, 'bar')
+      t.same(storage.referencesKeys.size, 0)
+      t.same(storage.keysReferences.size, 0)
+    })
+
     test('should get a warning setting references with invalidation disabled', async (t) => {
       t.plan(1)
 

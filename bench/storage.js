@@ -16,7 +16,7 @@ async function main () {
   let [,, type, ttl, entries, references, set, invalidate] = process.argv
 
   ttl = Number(ttl)
-  references = references === 'true' || references === '1'
+  references = Number(references)
   set = set === 'true' || set === '1'
   invalidate = invalidate === 'true' || invalidate === '1'
 
@@ -34,7 +34,7 @@ async function main () {
   }
 
   if (type === 'redis') {
-    options.client = new Redis({ enableAutoPipelining: true })
+    options.client = new Redis()
   }
 
   let start = hrtime.bigint()
@@ -44,10 +44,14 @@ async function main () {
 
   start = hrtime.bigint()
   for (let i = 0; i < entries; i++) {
-    await storage.set(`key-${i}`, `value-${i}`, ttl, references ? [`reference-key-${i}`] : null)
+    const r = []
+    for (let j = 0; j < references; j++) {
+      r.push(`reference-${i + j}`)
+    }
+    await storage.set(`key-${i}`, `value-${i}`, ttl, r)
   }
   end = hrtime.bigint()
-  console.log(`set ${entries} entries (ttl: ${!!ttl}, references: ${!!references}) in ${ms(end - start)} ms`)
+  console.log(`set ${entries} entries (ttl: ${!!ttl}, references: ${references}) in ${ms(end - start)} ms`)
 
   if (set) {
     start = hrtime.bigint()
@@ -55,16 +59,16 @@ async function main () {
       await storage.get(`key-${i}`)
     }
     end = hrtime.bigint()
-    console.log(`get ${entries} entries (ttl: ${!!ttl}, references: ${!!references}) in ${ms(end - start)} ms`)
+    console.log(`get ${entries} entries (ttl: ${!!ttl}, references: ${references}) in ${ms(end - start)} ms`)
   }
 
   if (invalidate) {
     start = hrtime.bigint()
     for (let i = 0; i < entries; i++) {
-      await storage.invalidate([`reference-key-${i}`])
+      await storage.invalidate([`reference-${i}`])
     }
     end = hrtime.bigint()
-    console.log(`invalidate ${entries} entries (ttl: ${!!ttl}, references: ${!!references}) in ${ms(end - start)} ms`)
+    console.log(`invalidate ${entries} entries (ttl: ${!!ttl}, references: ${references}) in ${ms(end - start)} ms`)
   }
 
   options.client && options.client.disconnect()

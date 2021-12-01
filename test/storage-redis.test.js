@@ -132,6 +132,16 @@ test('storage redis', async (t) => {
       t.same(await storage.store.smembers('r:fooers'), ['foo'])
     })
 
+    test('should not set an empty references', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('foo', 'bar', 100, [])
+
+      const value = await storage.store.get('foo')
+      t.equal(JSON.parse(value), 'bar')
+
+      t.same((await storage.store.keys('r:*')).length, 0)
+    })
+
     test('should set a custom references ttl', async (t) => {
       const storage = createStorage('redis', { client: redisClient, invalidation: { referencesTTL: 10 } })
       await storage.set('foo', 'bar', 100, ['fooers'])
@@ -839,9 +849,9 @@ test('storage redis', async (t) => {
 
         t.equal(report.references.scanned.length, 20)
         t.equal(report.references.removed.length, 20)
-        t.ok(report.keys.scanned.length > 50)
-        t.ok(report.keys.removed.length > 50)
-        t.ok(report.cursor > 100)
+        t.ok(report.keys.scanned.length > 1)
+        t.ok(report.keys.removed.length > 1)
+        t.ok(report.cursor > 1)
         t.equal(report.loops, 1)
         t.equal(report.error, null)
       })
