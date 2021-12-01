@@ -38,7 +38,7 @@ async function main () {
   }
 
   let start = hrtime.bigint()
-  const storage = await createStorage(type, options)
+  const storage = createStorage(type, options)
   let end = hrtime.bigint()
   console.log(`storage created in ${ms(end - start)} ms`)
 

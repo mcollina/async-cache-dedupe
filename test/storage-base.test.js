@@ -8,7 +8,7 @@ const { test } = t
 
 test('storage', async (t) => {
   test('should get an instance with default options', async (t) => {
-    const storage = await createStorage()
+    const storage = createStorage()
 
     t.ok(typeof storage.get === 'function')
     t.ok(typeof storage.set === 'function')

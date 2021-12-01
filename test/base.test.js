@@ -75,7 +75,7 @@ test('create a Cache that dedupes full signature', async (t) => {
 })
 
 test('missing function', async (t) => {
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
   t.throws(function () {
     cache.define('something', null)
   })
@@ -90,7 +90,7 @@ test('missing function', async (t) => {
 test('works with custom serialize', async (t) => {
   t.plan(2)
 
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
 
   cache.define(
     'fetchSomething',
@@ -126,7 +126,7 @@ test('constructor - options', async (t) => {
 
 test('define - options', async (t) => {
   test('wrong serialize', async (t) => {
-    const cache = new Cache({ storage: await createStorage() })
+    const cache = new Cache({ storage: createStorage() })
     t.throws(function () {
       cache.define('something', {
         serialize: 42
@@ -135,7 +135,7 @@ test('define - options', async (t) => {
   })
 
   test('wrong references', async (t) => {
-    const cache = new Cache({ storage: await createStorage() })
+    const cache = new Cache({ storage: createStorage() })
     t.throws(function () {
       cache.define('something', {
         references: 42
@@ -147,7 +147,7 @@ test('define - options', async (t) => {
 test('safe stable serialize', async (t) => {
   t.plan(5)
 
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
 
   const expected = [
     { foo: 'bar', bar: 'foo' },
@@ -177,7 +177,7 @@ test('safe stable serialize', async (t) => {
 test('strings', async (t) => {
   t.plan(3)
 
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
 
   const expected = ['42', '24']
 
@@ -202,7 +202,7 @@ test('strings', async (t) => {
 test('do not cache failures', async (t) => {
   t.plan(4)
 
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
 
   let called = false
   cache.define('fetchSomething', async (query) => {
@@ -221,7 +221,7 @@ test('do not cache failures', async (t) => {
 test('clear the full cache', async (t) => {
   t.plan(7)
 
-  const cache = new Cache({ ttl: 1, storage: await createStorage() })
+  const cache = new Cache({ ttl: 1, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')
@@ -263,7 +263,7 @@ test('clear the full cache', async (t) => {
 test('clears only one method', async (t) => {
   t.plan(6)
 
-  const cache = new Cache({ ttl: 1, storage: await createStorage() })
+  const cache = new Cache({ ttl: 1, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')
@@ -305,7 +305,7 @@ test('clears only one method', async (t) => {
 test('clears only one method with one value', async (t) => {
   t.plan(5)
 
-  const cache = new Cache({ ttl: 10, storage: await createStorage() })
+  const cache = new Cache({ ttl: 10, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')
@@ -332,7 +332,7 @@ test('clears only one method with one value', async (t) => {
 })
 
 test('throws for methods in the property chain', async function (t) {
-  const cache = new Cache({ storage: await createStorage() })
+  const cache = new Cache({ storage: createStorage() })
 
   const keys = [
     'toString',
@@ -351,7 +351,7 @@ test('throws for methods in the property chain', async function (t) {
 test('should cache with references', async function (t) {
   t.plan(1)
 
-  const cache = new Cache({ ttl: 60, storage: await createStorage() })
+  const cache = new Cache({ ttl: 60, storage: createStorage() })
 
   cache.define('run', {
     references: (args, key, result) => {
@@ -369,7 +369,7 @@ test('automatically expires with no TTL', async (t) => {
 
   let dedupes = 0
   const cache = new Cache({
-    storage: await createStorage(),
+    storage: createStorage(),
     onDedupe () {
       dedupes++
     }

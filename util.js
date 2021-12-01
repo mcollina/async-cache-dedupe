@@ -94,10 +94,10 @@ function randomSubset (array, size) {
 
   return result
 }
-
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
   bsearchIndex,
+
   randomSubset
 }

@@ -26,11 +26,9 @@ const StorageOptionsType = {
  * @param {StorageMemoryOptions|StorageRedisOptions} options
  * @returns {StorageMemory|StorageRedis}
  */
-async function createStorage (type, options) {
+function createStorage (type, options) {
   if (type === StorageOptionsType.redis) {
-    const storage = new StorageRedis(options)
-    await storage.init()
-    return storage
+    return new StorageRedis(options)
   }
   return new StorageMemory(options)
 }

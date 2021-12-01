@@ -2,33 +2,50 @@
 
 const { kValues, kStorage, kTTL, kOnDedupe, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
+const joi = require('joi')
+
+const cacheOptionsValidation = joi.object({
+  storage: joi.object().required(),
+  ttl: joi.number().integer().min(0).default(0),
+  onDedupe: joi.func().default(() => noop),
+  onHit: joi.func().default(() => noop),
+  onMiss: joi.func().default(() => noop)
+})
 
 class Cache {
   /**
-   * TODO signature
-   * @param {Options} opts
+   * @param {!Object} opts
    * @param {!Storage} opts.storage - the storage to use
-   * @param {number?} [opts.ttl=0] - in seconds; default 0 seconds, means no cache, only do dedupe
-   * @param {function} opts.onDedupe
-   * @param {function} opts.onHit
-   * @param {function} opts.onMiss
+   * @param {?number} [opts.ttl=0] - in seconds; default is 0 seconds, so it only does dedupe without cache
+   * @param {?function} opts.onDedupe
+   * @param {?function} opts.onHit
+   * @param {?function} opts.onMiss
    */
   constructor (opts) {
-    // TODO validate all options
-
-    if (!opts || !opts.storage) {
-      throw new Error('Missing the storage')
-    }
+    const { value: options, error } = cacheOptionsValidation.validate(opts || {})
+    if (error) { throw error }
 
     this[kValues] = {}
-    this[kStorage] = opts.storage
-    this[kTTL] = opts.ttl || 0
-    this[kOnDedupe] = opts.onDedupe || noop
-    this[kOnHit] = opts.onHit || noop
-    this[kOnMiss] = opts.onMiss || noop
+    this[kStorage] = options.storage
+    this[kTTL] = options.ttl
+    this[kOnDedupe] = options.onDedupe
+    this[kOnHit] = options.onHit
+    this[kOnMiss] = options.onMiss
   }
 
-  // TODO signature
+  /**
+   * add a new function to dedupe (and cache)
+   * @param {!string} name name of the function
+   * @param {?Object} [opts]
+   * @param {?function} [opts.storage] storage to use; default is the one passed to the constructor
+   * @param {?number} [opts.ttl] ttl for the results; default ttl is the one passed to the constructor
+   * @param {?function} [opts.onDedupe] function to call on dedupe; default is the one passed to the constructor
+   * @param {?function} [opts.onHit] function to call on hit; default is the one passed to the constructor
+   * @param {?function} [opts.onMiss] function to call on miss; default is the one passed to the constructor
+   * @param {?function} [opts.serialize] custom function to serialize the arguments of `func`, in order to create the key for deduping and caching
+   * @param {?function} [opts.references] function to generate references
+   * @param {!function} func the function to dedupe (and cache)
+   **/
   define (name, opts, func) {
     if (typeof opts === 'function') {
       func = opts
@@ -90,7 +107,8 @@ class Cache {
       throw new Error(`${name} is not defined in the cache`)
     }
 
-    // TODO validate?
+    // TODO validate key?
+
     return this[kValues][name].get(key)
   }
 
@@ -99,7 +117,8 @@ class Cache {
       throw new Error(`${name} is not defined in the cache`)
     }
 
-    // TODO validate?
+    // TODO validate key, value, ttl, references?
+
     return this[kValues][name].set(key, value, ttl, references)
   }
 
@@ -108,7 +127,8 @@ class Cache {
       throw new Error(`${name} is not defined in the cache`)
     }
 
-    // TODO validate?
+    // TODO validate references?
+
     return this[kValues][name].invalidate(references)
   }
 }
@@ -209,7 +229,7 @@ class Wrapper {
   }
 
   async clear (value) {
-    // TODO validate?
+    // TODO validate value?
     if (value) {
       const key = this.getKey(value)
       this.dedupes.set(key, undefined)

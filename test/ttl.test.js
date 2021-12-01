@@ -15,7 +15,7 @@ test('ttl', async (t) => {
   t.plan(5)
 
   const cache = new Cache({
-    storage: await createStorage(),
+    storage: createStorage(),
     ttl: 1
   })
 
@@ -36,7 +36,7 @@ test('ttl expires', async (t) => {
   t.plan(5)
 
   const cache = new Cache({
-    storage: await createStorage(),
+    storage: createStorage(),
     ttl: 2
   })
 
@@ -59,7 +59,7 @@ test('ttl expires', async (t) => {
 test('do not cache failures', async (t) => {
   t.plan(4)
 
-  const cache = new Cache({ ttl: 42, storage: await createStorage() })
+  const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   let called = false
   cache.define('fetchSomething', async (query) => {
@@ -78,7 +78,7 @@ test('do not cache failures', async (t) => {
 test('clear the full cache', async (t) => {
   t.plan(7)
 
-  const cache = new Cache({ ttl: 42, storage: await createStorage() })
+  const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')
@@ -120,7 +120,7 @@ test('clear the full cache', async (t) => {
 test('clears only one method', async (t) => {
   t.plan(6)
 
-  const cache = new Cache({ ttl: 42, storage: await createStorage() })
+  const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')
@@ -162,7 +162,7 @@ test('clears only one method', async (t) => {
 test('clears only one method with one value', async (t) => {
   t.plan(5)
 
-  const cache = new Cache({ ttl: 42, storage: await createStorage() })
+  const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
     t.pass('a called')

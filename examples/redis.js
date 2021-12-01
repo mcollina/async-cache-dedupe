@@ -12,8 +12,8 @@ async function main () {
 
   const cache = new Cache({
     ttl: 2, // default ttl, in seconds
-    storage: await createStorage('redis', { client: redisClient, log: console }),
-    // TODO listener:redisListener / autoPipelining:true
+    storage: createStorage('redis', { client: redisClient, log: console }),
+    // TODO autoPipelining:true
     listener: redisListener,
     onDedupe: (key) => {
       console.log('deduped', key)

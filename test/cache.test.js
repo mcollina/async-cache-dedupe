@@ -8,7 +8,7 @@ const { test } = t
 
 test('Cache', async (t) => {
   test('should get an instance with default options', async (t) => {
-    const cache = new Cache({ storage: await createStorage() })
+    const cache = new Cache({ storage: createStorage() })
 
     t.ok(typeof cache.define === 'function')
     t.ok(typeof cache.clear === 'function')
@@ -34,7 +34,7 @@ test('Cache', async (t) => {
 
     test('should get an error trying to use get of not defined name', async (t) => {
       t.plan(1)
-      const cache = new Cache({ storage: await createStorage() })
+      const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.get('fiiii', 'key').catch((err) => {
@@ -63,7 +63,7 @@ test('Cache', async (t) => {
 
     test('should get an error trying to use set of not defined name', async (t) => {
       t.plan(1)
-      const cache = new Cache({ storage: await createStorage() })
+      const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.set('fiiii', 'key', 'value').catch((err) => {
@@ -89,7 +89,7 @@ test('Cache', async (t) => {
 
     test('should get an error trying to invalidate of not defined name', async (t) => {
       t.plan(1)
-      const cache = new Cache({ storage: await createStorage() })
+      const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.invalidate('fiiii', ['references']).catch((err) => {
@@ -115,7 +115,7 @@ test('Cache', async (t) => {
 
     test('should get an error trying to clear of not defined name', async (t) => {
       t.plan(1)
-      const cache = new Cache({ storage: await createStorage() })
+      const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.clear('fiiii').catch((err) => {
