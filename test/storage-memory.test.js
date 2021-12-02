@@ -22,7 +22,7 @@ test('storage memory', async (t) => {
   })
 
   test('should get an error on invalid options', async (t) => {
-    t.throws(() => createStorage('memory', { size: -1 }), /"size" must be greater than or equal to 1/)
+    t.throws(() => createStorage('memory', { size: -1 }), /size must be a positive integer greater than 0/)
   })
 
   test('should not initialize references containeres on invalidation disabled', async (t) => {

@@ -1,6 +1,5 @@
 'use strict'
 
-const joi = require('joi')
 const stringify = require('safe-stable-stringify')
 const nullLogger = require('abstract-logging')
 const StorageInterface = require('./interface')
@@ -9,17 +8,6 @@ const { findNotMatching, randomSubset } = require('../util')
 const GC_DEFAULT_CHUNK = 64
 const GC_DEFAULT_LAZY_CHUNK = 64
 const REFERENCES_DEFAULT_TTL = 60
-
-const optionsValidation = joi.object({
-  client: joi.object().required(),
-  log: joi.object().default(() => nullLogger),
-  invalidation: joi.alternatives().try(
-    joi.boolean().default(false),
-    joi.object({
-      referencesTTL: joi.number().min(1).default(REFERENCES_DEFAULT_TTL)
-    }).default({ referencesTTL: REFERENCES_DEFAULT_TTL })
-  )
-})
 
 /**
  * @typedef StorageRedisOptions
@@ -33,16 +21,23 @@ class StorageRedis extends StorageInterface {
   /**
    * @param {?StorageRedisOptions} options
    */
-  constructor (opts) {
-    const { value: options, error } = optionsValidation.validate(opts || {})
-    if (error) { throw error }
+  constructor (options = {}) {
+    if (!options.client || typeof options.client !== 'object') {
+      throw new Error('Redis client is required')
+    }
 
     super(options)
-    this.log = options.log
+
+    if (options.invalidation && options.invalidation.referencesTTL &&
+      (typeof options.invalidation.referencesTTL !== 'number' || options.invalidation.referencesTTL < 1)) {
+      throw new Error('invalidation.referencesTTL must be a positive integer greater than 1')
+    }
+
+    this.log = options.log || nullLogger
     this.store = options.client
-    this.invalidation = options.invalidation
+    this.invalidation = !!options.invalidation
     // TODO doc what does this means
-    this.referencesTTL = options.invalidation && options.invalidation.referencesTTL
+    this.referencesTTL = (options.invalidation && options.invalidation.referencesTTL) || REFERENCES_DEFAULT_TTL
   }
 
   getReferenceKeyLabel (reference) {
@@ -284,14 +279,14 @@ class StorageRedis extends StorageInterface {
    * @param {?object} options
    * @param {number} [options.chunk=64] number of references to retrieve at once
    * @param {number|undefined} [options.lazy.cursor] cursor to start the scan; should be last cursor returned by scan; default start from the beginning
-   * @param {number} [options.lazy.chunk=64] number of references to check per gc cycle
+   * @param {number} [lazyChunk=64] number of references to check per gc cycle
    * @return {Object} report TODO doc
    *
    * TODO doc: a good strategy is 1 strict gc every N lazy gc
    * TODO doc: conseguences of dirty references (measure slowdown?)
    */
-  async gc (mode = 'lazy', opts) {
-    this.log.debug({ msg: 'acd/storage/redis.gc', mode, opts })
+  async gc (mode = 'lazy', options = {}) {
+    this.log.debug({ msg: 'acd/storage/redis.gc', mode, options })
 
     if (!this.invalidation) {
       this.log.warn({ msg: 'acd/storage/redis.gc does not run due to invalidation is disabled' })
@@ -307,25 +302,34 @@ class StorageRedis extends StorageInterface {
       error: null
     }
 
-    const gcOptionsValidation = joi.object({
-      chunk: joi.number().min(1).default(GC_DEFAULT_CHUNK),
-      lazy: joi.object({
-        chunk: joi.number().min(1).default(GC_DEFAULT_LAZY_CHUNK),
-        cursor: joi.number().min(0).default(0)
-      }).default({ chunk: GC_DEFAULT_LAZY_CHUNK })
-    })
-
     try {
-      const { value: options, error } = gcOptionsValidation.validate(opts || {})
-      if (error) {
-        report.error = error
+      let cursor = 0
+      let lazyChunk = GC_DEFAULT_LAZY_CHUNK
+
+      if (options.chunk && (typeof options.chunk !== 'number' || options.chunk < 1)) {
+        report.error = new Error('chunk must be a positive integer greater than 1')
         return report
       }
 
-      const chunk = options.chunk
-      const scanCount = Math.max(Math.min(options.lazy.chunk, chunk), 1)
+      if (options.lazy) {
+        if (options.lazy.chunk) {
+          if (typeof options.lazy.chunk !== 'number' || options.lazy.chunk < 1) {
+            report.error = new Error('lazy.chunk must be a positive integer greater than 1')
+            return report
+          }
+          lazyChunk = options.lazy.chunk
+        }
+        if (options.lazy.cursor) {
+          if (typeof options.lazy.cursor !== 'number' || options.lazy.cursor < 0) {
+            report.error = new Error('lazy.cursor must be a positive integer greater than 0')
+            return report
+          }
+          cursor = options.lazy.cursor
+        }
+      }
 
-      let cursor = options.lazy.cursor || 0
+      const chunk = options.chunk || GC_DEFAULT_CHUNK
+      const scanCount = Math.min(lazyChunk, chunk)
       const startingCursor = cursor
 
       let lastScanLength = -1
@@ -338,7 +342,7 @@ class StorageRedis extends StorageInterface {
         lastScanLength = scan[1].length
 
         const references = mode === 'lazy'
-          ? randomSubset(scan[1], options.lazy.chunk)
+          ? randomSubset(scan[1], lazyChunk)
           : scan[1]
 
         report.references.scanned = report.references.scanned.concat(references)
@@ -403,7 +407,7 @@ class StorageRedis extends StorageInterface {
         await this.store.pipeline(writes).exec()
         lastRemoved = writes.length
 
-        if (mode === 'lazy' && report.references.scanned.length >= options.lazy.chunk) {
+        if (mode === 'lazy' && report.references.scanned.length >= lazyChunk) {
           break
         }
       } while (startingCursor !== cursor && lastScanLength > 0 && lastRemoved > 0)

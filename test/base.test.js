@@ -122,6 +122,34 @@ test('constructor - options', async (t) => {
       new Cache()
     })
   })
+
+  test('invalid ttl', async (t) => {
+    t.throws(function () {
+      // eslint-disable-next-line no-new
+      new Cache({ storage: createStorage(), ttl: -1 })
+    })
+  })
+
+  test('invalid onDedupe', async (t) => {
+    t.throws(function () {
+      // eslint-disable-next-line no-new
+      new Cache({ storage: createStorage(), onDedupe: -1 })
+    })
+  })
+
+  test('invalid onHit', async (t) => {
+    t.throws(function () {
+      // eslint-disable-next-line no-new
+      new Cache({ storage: createStorage(), onHit: -1 })
+    })
+  })
+
+  test('invalid onMiss', async (t) => {
+    t.throws(function () {
+      // eslint-disable-next-line no-new
+      new Cache({ storage: createStorage(), onMiss: -1 })
+    })
+  })
 })
 
 test('define - options', async (t) => {

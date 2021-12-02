@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "abstract-logging": "^2.0.1",
-    "joi": "^17.4.2",
     "mnemonist": "^0.39.0",
     "safe-stable-stringify": "^2.2.0"
   },

@@ -1,18 +1,11 @@
 'use strict'
 
-const joi = require('joi')
 const LRUCache = require('mnemonist/lru-cache')
 const nullLogger = require('abstract-logging')
 const StorageInterface = require('./interface')
 const { findMatchingIndexes, findNotMatching, bsearchIndex } = require('../util')
 
 const DEFAULT_CACHE_SIZE = 1024
-
-const optionsValidation = joi.object({
-  size: joi.number().integer().min(1).default(DEFAULT_CACHE_SIZE),
-  log: joi.object().default(() => nullLogger),
-  invalidation: joi.boolean().default(false)
-})
 
 /**
  * @typedef StorageMemoryOptions
@@ -26,14 +19,15 @@ class StorageMemory extends StorageInterface {
    * in-memory storage
    * @param {StorageMemoryOptions} options
    */
-  constructor (opts) {
-    const { value: options, error } = optionsValidation.validate(opts || {})
-    if (error) { throw error }
+  constructor (options = {}) {
+    if (options.size && (typeof options.size !== 'number' || options.size < 1)) {
+      throw new Error('size must be a positive integer greater than 0')
+    }
 
     super(options)
-    this.size = options.size
-    this.log = options.log
-    this.invalidation = options.invalidation
+    this.size = options.size || DEFAULT_CACHE_SIZE
+    this.log = options.log || nullLogger
+    this.invalidation = options.invalidation || false
 
     this.init()
   }

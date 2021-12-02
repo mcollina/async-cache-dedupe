@@ -43,12 +43,16 @@ test('storage redis', async (t) => {
     t.ok(typeof storage.refresh === 'function')
   })
 
+  test('should throw on missing options', async (t) => {
+    t.throws(() => createStorage('redis'))
+  })
+
   test('should throw on invalid options, missing client', async (t) => {
     t.throws(() => createStorage('redis', { client: -1 }))
   })
 
-  test('should throw on missing options', async (t) => {
-    t.throws(() => createStorage('redis'))
+  test('should throw on invalid options, invalid referenceTTL', async (t) => {
+    t.throws(() => createStorage('redis', { client: {}, invalidation: { referencesTTL: -1 } }))
   })
 
   test('get', async (t) => {
@@ -695,16 +699,33 @@ test('storage redis', async (t) => {
       t.doesNotThrow(() => storage.gc())
     })
 
-    test('should not throw on invalid options', async (t) => {
+    test('should not throw on invalid options, chunk', async (t) => {
       t.plan(2)
-      const storage = createStorage('redis', {
-        client: {},
-        invalidation: true
-      })
+      const storage = createStorage('redis', { client: {}, invalidation: true })
 
       t.doesNotThrow(async () => {
         const report = await storage.gc('zzz', { chunk: -1 })
-        t.equal(report.error.message, '"chunk" must be greater than or equal to 1')
+        t.equal(report.error.message, 'chunk must be a positive integer greater than 1')
+      })
+    })
+
+    test('should not throw on invalid options, lazy.chunk', async (t) => {
+      t.plan(2)
+      const storage = createStorage('redis', { client: {}, invalidation: true })
+
+      t.doesNotThrow(async () => {
+        const report = await storage.gc('zzz', { lazy: { chunk: -1 } })
+        t.equal(report.error.message, 'lazy.chunk must be a positive integer greater than 1')
+      })
+    })
+
+    test('should not throw on invalid options, lazy.cursor', async (t) => {
+      t.plan(2)
+      const storage = createStorage('redis', { client: {}, invalidation: true })
+
+      t.doesNotThrow(async () => {
+        const report = await storage.gc('zzz', { lazy: { cursor: -1 } })
+        t.equal(report.error.message, 'lazy.cursor must be a positive integer greater than 0')
       })
     })
 
@@ -791,7 +812,7 @@ test('storage redis', async (t) => {
         t.equal(report.keys.scanned.length, 100)
         t.equal(report.keys.removed.length, 100)
         t.equal(report.cursor, 0)
-        t.ok(report.loops > 10)
+        t.ok(report.loops > 2)
         t.equal(report.error, null)
       })
 

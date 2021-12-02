@@ -2,15 +2,6 @@
 
 const { kValues, kStorage, kTTL, kOnDedupe, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
-const joi = require('joi')
-
-const cacheOptionsValidation = joi.object({
-  storage: joi.object().required(),
-  ttl: joi.number().integer().min(0).default(0),
-  onDedupe: joi.func().default(() => noop),
-  onHit: joi.func().default(() => noop),
-  onMiss: joi.func().default(() => noop)
-})
 
 class Cache {
   /**
@@ -21,16 +12,33 @@ class Cache {
    * @param {?function} opts.onHit
    * @param {?function} opts.onMiss
    */
-  constructor (opts) {
-    const { value: options, error } = cacheOptionsValidation.validate(opts || {})
-    if (error) { throw error }
+  constructor (options = {}) {
+    if (!options.storage) {
+      throw new Error('storage is required')
+    }
+
+    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0)) {
+      throw new Error('ttl must be a positive integer greater than 0')
+    }
+
+    if (options.onDedupe && typeof options.onDedupe !== 'function') {
+      throw new Error('onDedupe must be a function')
+    }
+
+    if (options.onHit && typeof options.onHit !== 'function') {
+      throw new Error('onHit must be a function')
+    }
+
+    if (options.onMiss && typeof options.onMiss !== 'function') {
+      throw new Error('onMiss must be a function')
+    }
 
     this[kValues] = {}
     this[kStorage] = options.storage
-    this[kTTL] = options.ttl
-    this[kOnDedupe] = options.onDedupe
-    this[kOnHit] = options.onHit
-    this[kOnMiss] = options.onMiss
+    this[kTTL] = options.ttl || 0
+    this[kOnDedupe] = options.onDedupe || noop
+    this[kOnHit] = options.onHit || noop
+    this[kOnMiss] = options.onMiss || noop
   }
 
   /**
