@@ -826,7 +826,7 @@ test('storage redis', async (t) => {
         t.equal(report.keys.scanned.length, 0)
         t.equal(report.keys.removed.length, 0)
         t.equal(report.cursor, 0)
-        t.equal(report.loops, 1)
+        t.ok(report.loops > 0)
         t.equal(report.error, null)
       })
     })
@@ -846,7 +846,7 @@ test('storage redis', async (t) => {
         t.equal(report.keys.scanned.length, 0)
         t.equal(report.keys.removed.length, 0)
         t.equal(report.cursor, 0)
-        t.equal(report.loops, 1)
+        t.ok(report.loops > 0)
         t.equal(report.error, null)
       })
 
@@ -873,7 +873,7 @@ test('storage redis', async (t) => {
         t.ok(report.keys.scanned.length > 1)
         t.ok(report.keys.removed.length > 1)
         t.ok(report.cursor > 1)
-        t.equal(report.loops, 1)
+        t.ok(report.loops > 0)
         t.equal(report.error, null)
       })
 
