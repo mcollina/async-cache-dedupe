@@ -1,20 +1,30 @@
 'use strict'
 
-const { test } = require('tap')
-const { Cache } = require('..')
+const { test, before, teardown } = require('tap')
+const Redis = require('ioredis')
 const stringify = require('safe-stable-stringify')
+const { Cache } = require('..')
 
 const { kValues } = require('../symbol')
 const createStorage = require('../storage')
 
 const dummyStorage = {
-  async get (key) { },
-  async set (key, value, ttl, references) { },
-  async remove (key) { },
-  async invalidate (references) { },
-  async clear () { },
-  async refresh () { }
+  async get(key) { },
+  async set(key, value, ttl, references) { },
+  async remove(key) { },
+  async invalidate(references) { },
+  async clear() { },
+  async refresh() { }
 }
+
+let redisClient
+before(async (t) => {
+  redisClient = new Redis()
+})
+
+teardown(async (t) => {
+  await redisClient.quit()
+})
 
 test('create a Cache that dedupes', async (t) => {
   t.plan(6)
@@ -22,7 +32,7 @@ test('create a Cache that dedupes', async (t) => {
   let dedupes = 0
   const cache = new Cache({
     storage: dummyStorage,
-    onDedupe () {
+    onDedupe() {
       dedupes++
     }
   })
@@ -95,7 +105,7 @@ test('works with custom serialize', async (t) => {
   cache.define(
     'fetchSomething',
     {
-      serialize (args) { return args.k }
+      serialize(args) { return args.k }
     },
     async (queries) => {
       return queries
@@ -231,6 +241,30 @@ test('do not cache failures', async (t) => {
   t.plan(4)
 
   const cache = new Cache({ storage: createStorage() })
+
+  let called = false
+  cache.define('fetchSomething', async (query) => {
+    t.pass('called')
+    if (!called) {
+      called = true
+      throw new Error('kaboom')
+    }
+    return { k: query }
+  })
+
+  await t.rejects(cache.fetchSomething(42))
+  t.same(await cache.fetchSomething(42), { k: 42 })
+})
+
+test('do not cache failures async', async (t) => {
+  t.plan(5)
+
+  const storage = createStorage()
+  storage.remove = async () => {
+    t.pass('async remove called')
+    throw new Error('kaboom')
+  }
+  const cache = new Cache({ storage })
 
   let called = false
   cache.define('fetchSomething', async (query) => {
@@ -391,6 +425,29 @@ test('should cache with references', async function (t) {
   await cache.run(1)
 })
 
+test('should cache with async references', async function (t) {
+  t.plan(1)
+
+  const cache = new Cache({ ttl: 60, storage: createStorage() })
+
+  cache.define('run', {
+    references: async (args, key, result) => {
+      t.pass('references called')
+      return ['some-reference']
+    }
+  }, () => 'something')
+
+  await cache.run(1)
+})
+
+test('should cache with async storage (redis)', async function (t) {
+  const cache = new Cache({ ttl: 60, storage: createStorage('redis', { client: redisClient }) })
+  cache.define('run', () => 'something')
+  await cache.run(1)
+
+  t.equal(await cache.run(2), 'something')
+})
+
 test('automatically expires with no TTL', async (t) => {
   // plan verifies that fetchSomething is called only once
   t.plan(10)
@@ -398,7 +455,7 @@ test('automatically expires with no TTL', async (t) => {
   let dedupes = 0
   const cache = new Cache({
     storage: createStorage(),
-    onDedupe () {
+    onDedupe() {
       dedupes++
     }
   })

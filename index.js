@@ -199,7 +199,9 @@ class Wrapper {
    */
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
-    const data = await this.storage.get(storageKey)
+    let data = this.storage.get(storageKey)
+    if (data && typeof data.then === 'function') { data = await data }
+
     if (data !== undefined) {
       this.onHit(key)
       return data
@@ -214,12 +216,15 @@ class Wrapper {
     }
 
     if (!this.references) {
-      await this.storage.set(storageKey, result, this.ttl)
+      let p = this.storage.set(storageKey, result, this.ttl)
+      if (p && typeof p.then === 'function') {
+        p = await p
+      }
       return result
     }
 
-    const references = await this.references(args, key, result)
-    // TODO references can be sync or async
+    let references = this.references(args, key, result)
+    if (references && typeof references.then === 'function') { references = await references }
     // TODO validate references?
     await this.storage.set(storageKey, result, this.ttl, references)
 
@@ -242,7 +247,8 @@ class Wrapper {
         // TODO option to remove key from storage on error?
         // we may want to relay on cache if the original function got error
         // then we probably need more option for that
-        this.storage.remove(this.getStorageKey(key)).catch(noop)
+        const r = this.storage.remove(this.getStorageKey(key))
+        if (r && typeof r.catch === 'function') { r.catch(noop) }
       })
   }
 

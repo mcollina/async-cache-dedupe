@@ -49,7 +49,7 @@ class StorageMemory extends StorageInterface {
    * @param {string} key
    * @returns {undefined|*} undefined if key not found or expired
    */
-  async get (key) {
+  get (key) {
     this.log.debug({ msg: 'acd/storage/memory.get', key })
 
     const entry = this.store.get(key)
@@ -74,7 +74,7 @@ class StorageMemory extends StorageInterface {
    * @param {?number} [ttl=0] - ttl in seconds; zero means key will not be stored
    * @param {?string[]} references
    */
-  async set (key, value, ttl, references) {
+  set (key, value, ttl, references) {
     this.log.debug({ msg: 'acd/storage/memory.set', key, value, ttl, references })
 
     ttl = Number(ttl)
@@ -154,7 +154,7 @@ class StorageMemory extends StorageInterface {
    * @param {string} key
    * @returns {boolean} indicates if key was removed
    */
-  async remove (key) {
+  remove (key) {
     this.log.debug({ msg: 'acd/storage/memory.remove', key })
 
     const removed = this._removeKey(key)
@@ -244,7 +244,7 @@ class StorageMemory extends StorageInterface {
    * @param {string[]} references
    * @returns {string[]} removed keys
    */
-  async invalidate (references) {
+  invalidate (references) {
     if (!this.invalidation) {
       this.log.warn({ msg: 'acd/storage/memory.invalidate, exit due invalidation is disabled' })
       return []
@@ -283,7 +283,7 @@ class StorageMemory extends StorageInterface {
    * @param {?string} name
    * @return {string[]} removed keys
    */
-  async clear (name) {
+  clear (name) {
     this.log.debug({ msg: 'acd/storage/memory.clear', name })
 
     if (!name) {
@@ -318,7 +318,7 @@ class StorageMemory extends StorageInterface {
     return removed
   }
 
-  async refresh () {
+  refresh () {
     this.log.debug({ msg: 'acd/storage/memory.refresh' })
 
     this.init()

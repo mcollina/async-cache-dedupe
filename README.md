@@ -66,6 +66,8 @@ TODO
 * `serialize`: a function to convert the given argument into a serializable object (or string).
 * `onHit`: a function that is called every time there is a hit in the cache.
 
+TODO references: can be sync or async function
+
 TODO storage, use multiple storages
 
 TODO redis options referencesTTL
