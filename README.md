@@ -59,10 +59,22 @@ Define a new function to cache of the given `name`.
 
 Options:
 
+TODO
+
 * `tll`: the maximum time a cache entry can live, default as defined in the cache.
 * `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default as defined in the cache.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
 * `onHit`: a function that is called every time there is a hit in the cache.
+
+TODO storage, use multiple storages
+
+TODO redis options referencesTTL
+
+TODO redis gc
+
+* report
+* info: a good strategy is 1 strict gc every N lazy gc
+* conseguences of dirty references (measure slowdown?)
 
 The `define` method adds a `cache[name]` function that will call the `original` function if the result is not present
 in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`](https://www.npmjs.com/package/safe-stable-stringify)
@@ -72,6 +84,11 @@ and it is passed as the `cacheKey` argument to the original function.
 
 Clear the cache. If `name` is specified, all the cache entries from the function defined with that name are cleared.
 If `arg` is specified, only the elements cached with the given `name` and `arg` are cleared.
+
+TODO?
+
+cacheSize->storage
+## Breaking Change 
 
 ## License
 

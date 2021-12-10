@@ -80,7 +80,6 @@ class Cache {
       throw new TypeError('references must be a function')
     }
 
-    // TODO doc we could even have a different storage for each key
     const storage = opts.storage || this[kStorage]
     const ttl = opts.ttl || this[kTTL]
     const onDedupe = opts.onDedupe || this[kOnDedupe]
@@ -142,7 +141,17 @@ class Cache {
 }
 
 class Wrapper {
-  // TODO signature
+  /**
+   * @param {function} func
+   * @param {string} name
+   * @param {function} serialize
+   * @param {function} references
+   * @param {Storage} storage
+   * @param {number} ttl
+   * @param {function} onDedupe
+   * @param {function} onHit
+   * @param {function} onMiss
+   */
   constructor (func, name, serialize, references, storage, ttl, onDedupe, onHit, onMiss) {
     this.dedupes = new Map()
     this.func = func
@@ -210,6 +219,7 @@ class Wrapper {
     }
 
     const references = await this.references(args, key, result)
+    // TODO references can be sync or async
     // TODO validate references?
     await this.storage.set(storageKey, result, this.ttl, references)
 

@@ -4,18 +4,18 @@ const createStorage = require('../storage')
 const { Cache } = require('../')
 const Redis = require('ioredis')
 
-// TODO
-
 async function main () {
-  const redisClient = new Redis()
-  const redisListener = new Redis()
-
   const cache = new Cache({
     ttl: 2, // default ttl, in seconds
-    storage: createStorage('redis', { client: redisClient, log: console }),
-    listener: redisListener,
+    storage: createStorage('redis', { client: new Redis(), log: console }),
     onDedupe: (key) => {
       console.log('deduped', key)
+    },
+    onHit: (key) => {
+      console.log('hit', key)
+    },
+    onMiss: (key) => {
+      console.log('miss', key)
     }
   })
 

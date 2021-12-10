@@ -36,7 +36,6 @@ class StorageRedis extends StorageInterface {
     this.log = options.log || nullLogger
     this.store = options.client
     this.invalidation = !!options.invalidation
-    // TODO doc what does this means
     this.referencesTTL = (options.invalidation && options.invalidation.referencesTTL) || REFERENCES_DEFAULT_TTL
   }
 
@@ -280,10 +279,8 @@ class StorageRedis extends StorageInterface {
    * @param {number} [options.chunk=64] number of references to retrieve at once
    * @param {number|undefined} [options.lazy.cursor] cursor to start the scan; should be last cursor returned by scan; default start from the beginning
    * @param {number} [lazyChunk=64] number of references to check per gc cycle
-   * @return {Object} report TODO doc
-   *
-   * TODO doc: a good strategy is 1 strict gc every N lazy gc
-   * TODO doc: conseguences of dirty references (measure slowdown?)
+   * @return {Object} report information of the operation
+   *   references scanned/removed, keys scanned/removed, loops, cursor, error if any
    */
   async gc (mode = 'lazy', options = {}) {
     this.log.debug({ msg: 'acd/storage/redis.gc', mode, options })
