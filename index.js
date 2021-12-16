@@ -2,6 +2,7 @@
 
 const { kValues, kStorage, kTTL, kOnDedupe, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
+const createStorage = require('./storage')
 
 class Cache {
   /**
@@ -286,3 +287,4 @@ class Query {
 function noop () { }
 
 module.exports.Cache = Cache
+module.exports.createStorage = createStorage

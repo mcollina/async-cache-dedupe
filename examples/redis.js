@@ -1,7 +1,6 @@
 'use strict'
 
-const createStorage = require('../storage')
-const { Cache } = require('../')
+const { Cache, createStorage } = require('async-cache-dedupe')
 const Redis = require('ioredis')
 
 async function main () {

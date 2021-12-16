@@ -1,5 +1,4 @@
-import { Cache } from '../index.js'
-import createStorage from '../storage/index.js'
+import { Cache, createStorage } from 'async-cache-dedupe'
 
 const cache = new Cache({
   ttl: 5, // default ttl, in seconds

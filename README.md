@@ -12,10 +12,11 @@ npm i async-cache-dedupe
 ## Example
 
 ```js
-import { Cache } from 'async-cache-dedupe'
+import { Cache, createStorage } from 'async-cache-dedupe'
 
 const cache = new Cache({
-  ttl: 5 // seconds
+  ttl: 5, // seconds
+  storage: createStorage('memory'),
 })
 
 cache.define('fetchSomething', async (k) => {
@@ -51,7 +52,40 @@ Creates a new cache.
 Options:
 
 * `tll`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as as the promise resolves.
-* `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default `1024`.
+* `storage`: the storage to use, `memory` or `redis`, created with `createStorage`.
+* `onDedupe`: a function that is called every time there is a defined function is deduped.
+* `onHit`: a function that is called every time there is a hit in the cache.
+* `onMiss`: a function that is called every time the result is not in the cache.
+
+### `createStorage(type, options)`
+
+default cache is in `memory`, but a `redis` storage can be used for a larger and shared cache.  
+Storage options are:
+
+* `type`: `memory` (default) or `redis`
+* `options`: by storage type
+  * for `memory` type
+    * `size`: maximum number of items to store in the cache _per resolver_. Default is `1024`.
+    * `invalidation`: enable invalidation, TODO see [documentation](#invalidation). Default is disabled.
+    * `log`: logger instance `pino` compatible, default is disabled.
+
+    Example  
+
+    ```js
+    createStorage('memory', { size: 2048 })
+    ```
+
+  * for `redis` type
+    * `client`: a redis client instance, mandatory. Should be an `ioredis` client or compatible.
+    * `invalidation`: enable invalidation, TODO see [documentation](#invalidation). Default is disabled.
+    * `invalidation.referencesTTL`: references TTL in seconds.  
+    * `log`: logger instance `pino` compatible, default is disabled.
+
+    Example
+
+    ```js
+    createStorage('redis', { client: new Redis(), invalidation: { referencesTTL: 60 } })
+    ```
 
 ### `cache.define(name[, opts], original(arg, cacheKey))`
 
@@ -59,16 +93,16 @@ Define a new function to cache of the given `name`.
 
 Options:
 
-TODO
-
 * `tll`: the maximum time a cache entry can live, default as defined in the cache.
-* `cacheSize`: the maximum amount of entries to fit in the cache for each defined method, default as defined in the cache.
+* `storage`: the storage to use, `memory` or `redis`, created with `createStorage`.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
+* `onDedupe`: a function that is called every time there is a defined function is deduped.
 * `onHit`: a function that is called every time there is a hit in the cache.
+* `onMiss`: a function that is called every time the result is not in the cache.
 
 TODO references: can be sync or async function
 
-TODO storage, use multiple storages
+TODO storage, use different storages
 
 TODO redis options referencesTTL
 
@@ -87,10 +121,9 @@ and it is passed as the `cacheKey` argument to the original function.
 Clear the cache. If `name` is specified, all the cache entries from the function defined with that name are cleared.
 If `arg` is specified, only the elements cached with the given `name` and `arg` are cleared.
 
-TODO?
+TODO? Breaking Changes
 
-cacheSize->storage
-## Breaking Change 
+* cacheSize->storage
 
 ## License
 
