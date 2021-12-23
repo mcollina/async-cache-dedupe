@@ -51,8 +51,8 @@ Creates a new cache.
 
 Options:
 
-* `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as as the promise resolves.
-* `onDedupe`: a function that is called every time there is a defined function is deduped.
+* `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as the promise resolves.
+* `onDedupe`: a function that is called every time it is defined is deduped.
 * `onHit`: a function that is called every time there is a hit in the cache.
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage options; default is `{ type: "memory" }`
@@ -93,7 +93,7 @@ Options:
 
 * `ttl`: the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
-* `onDedupe`: a function that is called every time there is a defined function is deduped.
+* `onDedupe`: a function that is called every time there is defined is deduped.
 * `onHit`: a function that is called every time there is a hit in the cache.
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
@@ -119,19 +119,19 @@ If `arg` is specified, only the elements cached with the given `name` and `arg` 
 ## Invalidation
 
 Along with `time to live` invalidation of the cache entries, we can use invalidation by keys.  
-The concept behind invalidation by keys is that entries have an auxiliary key set that explicitly link requests along with their own result. These axiliary keys are called here `references`.  
+The concept behind invalidation by keys is that entries have an auxiliary key set that explicitly links requests along with their own result. These auxiliary keys are called here `references`.  
 A scenario. Let's say we have an entry _user_ `{id: 1, name: "Alice"}`, it may change often or rarely, the `ttl` system is not accurate:
 
-* it can be updated before `ttl` expiration, this case the old value is showed until expiration by `ttl`.  
-* it's not been updated during `ttl` expiration, so in this case we don't need to reload the value, because it's not changed
+* it can be updated before `ttl` expiration, in this case the old value is shown until expiration by `ttl`.  
+* it's not been updated during `ttl` expiration, so in this case, we don't need to reload the value, because it's not changed
 
 To solve this common problem, we can use `references`.  
 We can say that the result of defined function `getUser(id: 1)` has reference `user~1`, and the result of defined function `findUsers`, containing `{id: 1, name: "Alice"},{id: 2, name: "Bob"}` has references `[user~1,user~2]`.
 So we can find the results in the cache by their `references`, independently of the request that generated them, and we can invalidate by `references`.
 
-So, when a writing event involvin `user {id: 1}` happens (usually an update), we can remove all the entries in the cache that have references to `user~1`, so the result of `getUser(id: 1)` and `findUsers`, and they will be reloaded at the next request with the new data - but not the result of `getUser(id: 2)`.
+So, when a writing event involving `user {id: 1}` happens (usually an update), we can remove all the entries in the cache that have references to `user~1`, so the result of `getUser(id: 1)` and `findUsers`, and they will be reloaded at the next request with the new data - but not the result of `getUser(id: 2)`.
 
-Explicit invalidation is `disabled` by default, you have to enable in `storage` settings.
+Explicit invalidation is `disabled` by default, you have to enable it in `storage` settings.
 
 See [mercurius-cache-example](https://github.com/mercurius/mercurius-cache-example) for a complete example.
 
@@ -139,8 +139,8 @@ See [mercurius-cache-example](https://github.com/mercurius/mercurius-cache-examp
 
 Using a `redis` storage is the best choice for a shared and/or large cache.  
 All the `references` entries in redis have `referencesTTL`, so they are all cleaned at some time.
-`referencesTTL` value should be set at the maximum of all the `ttl`s, to let them be available for every cache entry, but at the same time they expire, avoiding data leaking.  
-Anyway, we should keep `references` up-to-date to be more efficient on writes and invalidation, using the `garbage collector` function, that prunes the expired references: while expired references does not compromise the cache integrity, they slow down the I/O operations.  
+`referencesTTL` value should be set at the maximum of all the `ttl`s, to let them be available for every cache entry, but at the same time, they expire, avoiding data leaking.  
+Anyway, we should keep `references` up-to-date to be more efficient on writes and invalidation, using the `garbage collector` function, that prunes the expired references: while expired references do not compromise the cache integrity, they slow down the I/O operations.  
 Storage `memory` doesn't have `gc`.
 
 ### Redis garbage collector
@@ -153,15 +153,15 @@ As said, While the garbage collector is optional, is highly recommended to keep 
   In `lazy` mode, only a chunk of the `references` are randomly checked, and probably freed; running `lazy` jobs tend to eventually clear all the expired `references`.
   In `strict` mode, all the `references` are checked and freed, and after that, `references` and entries are perfectly clean.
   `lazy` mode is the light heuristic way to ensure cached entries and `references` are cleared without stressing too much `redis`, `strict` mode at the opposite stress more `redis` to get a perfect result.
-  The best strategy is to combine them both, running often `lazy` jobs along with some `strict` ones, depending by the size of the cache.
+  The best strategy is to combine them both, running often `lazy` jobs along with some `strict` ones, depending on the size of the cache.
 
 Options:
 
 * `chunk`: the chunk size of references analyzed per loops, default `64`
-* `lazy~chunk`: the chunk size of references analyzed per loops in `lazy` mode, default `64`; if both `chunk` and `lazy.chunk` are set, the maximum one is taken
-* `lazy~cursor`: the cursor offset, default zero; cursor should be set at `report.cursor` to continue scanning from previous operation
+* `lazy~chunk`: the chunk size of references analyzed per loops in `lazy` mode, default `64`; if both `chunk` and `lazy.chunk` is set, the maximum one is taken
+* `lazy~cursor`: the cursor offset, default zero; cursor should be set at `report.cursor` to continue scanning from the previous operation
 
-Return `report` of the `gc` job, as follow
+Return `report` of the `gc` job, as follows
 
 ```json
 "report":{
