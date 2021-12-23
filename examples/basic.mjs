@@ -1,10 +1,10 @@
-import { Cache, createStorage } from 'async-cache-dedupe'
+import { createCache } from 'async-cache-dedupe'
 
-const cache = new Cache({
+const cache = createCache({
   ttl: 5, // default ttl, in seconds
-  storage: createStorage('memory', {
+  storage: { type: 'memory', options: {
     size: 2048, // entries to store for each defined function
-  }),
+  }},
   onDedupe: (key) => {
     console.log('deduped', key)
   },

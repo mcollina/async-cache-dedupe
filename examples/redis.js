@@ -1,12 +1,12 @@
 'use strict'
 
-const { Cache, createStorage } = require('async-cache-dedupe')
+const { createCache } = require('async-cache-dedupe')
 const Redis = require('ioredis')
 
 async function main () {
-  const cache = new Cache({
+  const cache = createCache({
     ttl: 2, // default ttl, in seconds
-    storage: createStorage('redis', { client: new Redis(), log: console }),
+    storage: { type: 'redis', options: { client: new Redis(), log: console } },
     onDedupe: (key) => {
       console.log('deduped', key)
     },
