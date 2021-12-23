@@ -4,7 +4,8 @@
   "description": "An async deduping cache",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test/*test.js"
+    "test": "standard **.js | snazzy && tap test/*test.js",
+    "lint:fix": "standard --fix **.js"
   },
   "repository": {
     "type": "git",
@@ -17,18 +18,30 @@
     "graphql"
   ],
   "author": "Matteo Collina <hello@matteocollina.com>",
+  "contributors": [
+    {
+      "name": "Simone Sanfratello",
+      "url": "https://github.com/simone-sanfratello",
+      "email": "simone.sanfra@gmail.com"
+    }
+  ],
   "license": "MIT",
   "devDependencies": {
-    "@fastify/pre-commit": "^2.0.0",
+    "@fastify/pre-commit": "^2.0.2",
+    "ioredis": "^4.28.0",
+    "proxyquire": "^2.1.3",
     "snazzy": "^9.0.0",
-    "standard": "^16.0.0",
-    "tap": "^15.0.9"
+    "standard": "^16.0.4",
+    "tap": "^15.0.10"
   },
   "dependencies": {
+    "abstract-logging": "^2.0.1",
     "mnemonist": "^0.39.0",
-    "safe-stable-stringify": "^2.0.0"
+    "safe-stable-stringify": "^2.2.0"
   },
   "standard": {
-    "ignore": ["example.mjs"]
+    "ignore": [
+      "example.mjs"
+    ]
   }
 }
