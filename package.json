@@ -18,6 +18,13 @@
     "graphql"
   ],
   "author": "Matteo Collina <hello@matteocollina.com>",
+  "contributors": [
+    {
+      "name": "Simone Sanfratello",
+      "url": "https://github.com/simone-sanfratello",
+      "email": "simone.sanfra@gmail.com"
+    }
+  ],
   "license": "MIT",
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",

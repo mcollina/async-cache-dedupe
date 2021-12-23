@@ -216,9 +216,14 @@ setInterval(() => {
 
 ---
 
-## Breaking Changes
+## Maintainers
 
-TODO move to ..?
+* [__Matteo Collina__](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
+* [__Simone Sanfratello__](https://github.com/simone-sanfratello), <https://twitter.com/simonesanfradev>, <https://www.npmjs.com/~simone.sanfra>
+
+---
+
+## Breaking Changes
 
 * version `0.5.0` -> `0.6.0`
   * `options.cacheSize` is dropped in favor of `storage`
