@@ -1,7 +1,7 @@
 'use strict'
 
 const t = require('tap')
-const createStorage = require('../storage')
+const createStorage = require('../src/storage')
 const { promisify } = require('util')
 
 const sleep = promisify(setTimeout)

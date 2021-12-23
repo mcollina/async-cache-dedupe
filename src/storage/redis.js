@@ -272,7 +272,7 @@ class StorageRedis extends StorageInterface {
    * scan references and clean expired/evicted keys
    * @param {?string} [mode=lazy] lazy or strict
    * - in lazy mode, only `options.max` references are scanned every time, picking keys to check randomly
-   *   so this operation is lighter while does not ensure references perferction
+   *   so this operation is lighter while does not ensure references full clean up
    * - in strict mode, all references and keys are checked
    *   this operation scan the whole db and is slow
    * @param {?object} options

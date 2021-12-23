@@ -1,8 +1,8 @@
 'use strict'
 
 const t = require('tap')
-const { Cache } = require('..')
-const createStorage = require('../storage')
+const { Cache } = require('../src/cache')
+const createStorage = require('../src/storage')
 
 const { test } = t
 

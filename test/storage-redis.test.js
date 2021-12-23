@@ -1,11 +1,11 @@
 'use strict'
 
 const t = require('tap')
-const createStorage = require('../storage')
 const { promisify } = require('util')
 const Redis = require('ioredis')
 const proxyquire = require('proxyquire')
-const StorageRedis = proxyquire('../storage/redis', {
+const createStorage = require('../src/storage')
+const StorageRedis = proxyquire('../src/storage/redis', {
   '../util': {
     randomSubset: (array, size) => array.slice(0, size)
   }

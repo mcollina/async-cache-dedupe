@@ -34,9 +34,7 @@ async function main () {
   }
 
   if (type === 'redis') {
-    options.client = new Redis({
-      // enableAutoPipelining: true -> faster disabled?!
-    })
+    options.client = new Redis()
   }
 
   let start = hrtime.bigint()

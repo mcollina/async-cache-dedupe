@@ -3,10 +3,10 @@
 const { test, before, teardown } = require('tap')
 const Redis = require('ioredis')
 const stringify = require('safe-stable-stringify')
-const { Cache } = require('..')
 
-const { kValues } = require('../symbol')
-const createStorage = require('../storage')
+const { kValues, kStorage } = require('../src/symbol')
+const createStorage = require('../src/storage')
+const { Cache, createCache } = require('../')
 
 const dummyStorage = {
   async get(key) { },
@@ -82,6 +82,56 @@ test('create a Cache that dedupes full signature', async (t) => {
     { k: 24 },
     { k: 42 }
   ])
+})
+
+test('create a cache with the factory function, default options', async t => {
+  const cache = createCache()
+
+  t.ok(cache[kStorage])
+
+  cache.define('plusOne', async (value, key) => value + 1)
+
+  t.equal(await cache.plusOne(42), 43)
+  t.equal(await cache.plusOne(24), 25)
+  t.equal(await cache.plusOne(42), 43)
+})
+
+test('create a cache with the factory function, with default storage', async t => {
+  let hits = 0
+  const cache = createCache({
+    ttl: 1,
+    onHit() { hits++ }
+  })
+
+  t.ok(cache[kStorage].get)
+  t.ok(cache[kStorage].set)
+
+  cache.define('plusOne', async (value, key) => value + 1)
+
+  t.equal(await cache.plusOne(42), 43)
+  t.equal(await cache.plusOne(24), 25)
+  t.equal(await cache.plusOne(42), 43)
+
+  t.equal(hits, 1)
+})
+
+test('create a cache with the factory function, with storage', async t => {
+  let hits = 0
+  const cache = createCache({
+    ttl: 1,
+    storage: { type: 'memory', options: { size: 9 } },
+    onHit() { hits++ }
+  })
+
+  t.equal(cache[kStorage].size, 9)
+
+  cache.define('plusOne', async (value, key) => value + 1)
+
+  t.equal(await cache.plusOne(42), 43)
+  t.equal(await cache.plusOne(24), 25)
+  t.equal(await cache.plusOne(42), 43)
+
+  t.equal(hits, 1)
 })
 
 test('missing function', async (t) => {
@@ -179,6 +229,15 @@ test('define - options', async (t) => {
         references: 42
       }, async () => { })
     })
+  })
+
+  test('custom storage', async (t) => {
+    const cache = new Cache({ storage: createStorage() })
+    cache.define('foo', {
+      storage: { type: 'memory', options: { size: 9 } }
+    }, () => true)
+
+    t.ok(cache.foo())
   })
 })
 

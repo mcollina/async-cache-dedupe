@@ -1,8 +1,7 @@
 'use strict'
 
 const { test } = require('tap')
-
-const { bsearchIndex, randomSubset } = require('../util')
+const { bsearchIndex, randomSubset } = require('../src/util')
 
 test('bsearchIndex', async t => {
   const cases = [
