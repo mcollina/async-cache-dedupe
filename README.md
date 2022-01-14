@@ -53,6 +53,7 @@ Options:
 
 * `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as the promise resolves.
 * `onDedupe`: a function that is called every time it is defined is deduped.
+* `onError`: a function that is called every time there is a cache error.
 * `onHit`: a function that is called every time there is a hit in the cache.
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage options; default is `{ type: "memory" }`
@@ -94,6 +95,7 @@ Options:
 * `ttl`: the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
 * `onDedupe`: a function that is called every time there is defined is deduped.
+* `onError`: a function that is called every time there is a cache error.
 * `onHit`: a function that is called every time there is a hit in the cache.
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
@@ -194,7 +196,7 @@ const storage = createStorage('redis', { client: redisClient, invalidation: true
 
 let cursor
 setInterval(() => {
-  const report = await storage.gc('lazy', { lazy: { cursor }})
+  const report = await storage.gc('lazy', { lazy: { cursor } })
   if(report.error) {
     console.error('error on redis gc', error)
     return
@@ -204,7 +206,7 @@ setInterval(() => {
 }, 60e3).unref()
 
 setInterval(() => {
-  const report = await storage.gc('strict', chunk: 128})
+  const report = await storage.gc('strict', { chunk: 128 })
   if(report.error) {
     console.error('error on redis gc', error)
     return
