@@ -1,6 +1,6 @@
 'use strict'
 
-const { kValues, kStorage, kTTL, kOnDedupe, kOnHit, kOnMiss } = require('./symbol')
+const { kValues, kStorage, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const createStorage = require('./storage')
 
@@ -10,6 +10,7 @@ class Cache {
    * @param {!Storage} opts.storage - the storage to use
    * @param {?number} [opts.ttl=0] - in seconds; default is 0 seconds, so it only does dedupe without cache
    * @param {?function} opts.onDedupe
+   * @param {?function} opts.onError
    * @param {?function} opts.onHit
    * @param {?function} opts.onMiss
    */
@@ -26,6 +27,10 @@ class Cache {
       throw new Error('onDedupe must be a function')
     }
 
+    if (options.onError && typeof options.onError !== 'function') {
+      throw new Error('onError must be a function')
+    }
+
     if (options.onHit && typeof options.onHit !== 'function') {
       throw new Error('onHit must be a function')
     }
@@ -38,6 +43,7 @@ class Cache {
     this[kStorage] = options.storage
     this[kTTL] = options.ttl || 0
     this[kOnDedupe] = options.onDedupe || noop
+    this[kOnError] = options.onError || noop
     this[kOnHit] = options.onHit || noop
     this[kOnMiss] = options.onMiss || noop
   }
@@ -49,6 +55,7 @@ class Cache {
    * @param {?Object} [opts.storage] storage to use; default is the main one
    * @param {?number} [opts.ttl] ttl for the results; default ttl is the one passed to the constructor
    * @param {?function} [opts.onDedupe] function to call on dedupe; default is the one passed to the constructor
+   * @param {?function} [opts.onError] function to call on error; default is the one passed to the constructor
    * @param {?function} [opts.onHit] function to call on hit; default is the one passed to the constructor
    * @param {?function} [opts.onMiss] function to call on miss; default is the one passed to the constructor
    * @param {?function} [opts.serialize] custom function to serialize the arguments of `func`, in order to create the key for deduping and caching
@@ -84,10 +91,11 @@ class Cache {
     const storage = opts.storage ? createStorage(opts.storage.type, opts.options) : this[kStorage]
     const ttl = opts.ttl || this[kTTL]
     const onDedupe = opts.onDedupe || this[kOnDedupe]
+    const onError = opts.onError || this[kOnError]
     const onHit = opts.onHit || this[kOnHit]
     const onMiss = opts.onMiss || this[kOnMiss]
 
-    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onHit, onMiss)
+    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss)
 
     this[kValues][name] = wrapper
     this[name] = wrapper.add.bind(wrapper)
@@ -150,10 +158,11 @@ class Wrapper {
    * @param {Storage} storage
    * @param {number} ttl
    * @param {function} onDedupe
+   * @param {function} onError
    * @param {function} onHit
    * @param {function} onMiss
    */
-  constructor (func, name, serialize, references, storage, ttl, onDedupe, onHit, onMiss) {
+  constructor (func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss) {
     this.dedupes = new Map()
     this.func = func
     this.name = name
@@ -163,6 +172,7 @@ class Wrapper {
     this.storage = storage
     this.ttl = ttl
     this.onDedupe = onDedupe
+    this.onError = onError
     this.onHit = onHit
     this.onMiss = onMiss
   }
@@ -242,8 +252,8 @@ class Wrapper {
         this.dedupes.set(key, undefined)
         return result
       })
-      // TODO do we want an onError event?
-      .catch(() => {
+      .catch(err => {
+        this.onError(err)
         this.dedupes.set(key, undefined)
         // TODO option to remove key from storage on error?
         // we may want to relay on cache if the original function got error

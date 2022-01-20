@@ -197,6 +197,13 @@ test('constructor - options', async (t) => {
     })
   })
 
+   test('invalid onError', async (t) => {
+    t.throws(function () {
+      // eslint-disable-next-line no-new
+      new Cache({ storage: createStorage(), onError: {} })
+    })
+  })
+
   test('invalid onHit', async (t) => {
     t.throws(function () {
       // eslint-disable-next-line no-new
@@ -542,4 +549,34 @@ test('automatically expires with no TTL', async (t) => {
 
   t.same(await cache.fetchSomething(42), { k: 42 })
   t.equal(dedupes, 1)
+})
+
+test('calls onError listener', async (t) => {
+  t.plan(2)
+
+  let onError
+
+  const promise = new Promise((resolve, reject) => {
+    onError = reject
+  })
+
+  const cache = new Cache({ storage: createStorage(), onError })
+
+  cache.define('willDefinitelyWork', async (query, cacheKey) => {
+    throw new Error('whoops')
+  })
+
+  try {
+    await cache.willDefinitelyWork(42)
+    throw new Error('Should throw')
+  } catch (err) {
+    t.equal(err.message, 'whoops')
+  }
+
+  try {
+    await promise
+    throw new Error('Should throw')
+  } catch (err) {
+    t.equal(err.message, 'whoops')
+  }
 })
