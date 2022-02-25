@@ -1,7 +1,7 @@
 'use strict'
 
 const { test } = require('tap')
-const { bsearchIndex, randomSubset } = require('../src/util')
+const { bsearchIndex, randomSubset, wildcardMatch } = require('../src/util')
 
 test('bsearchIndex', async t => {
   const cases = [
@@ -44,5 +44,29 @@ test('randomSubset', async t => {
   for (const case_ of cases) {
     const result = randomSubset(case_.array, case_.size)
     t.equal(result.length, case_.resultLength)
+  }
+})
+
+test('wildcardMatch', async t => {
+  const cases = [
+    { value: '*', content: '123', result: true },
+    { value: 'foo:*', content: 'boo:1', result: false },
+    { value: 'abcd', content: 'abcd', result: true },
+    { value: '12*', content: '123', result: true },
+    { value: '12*', content: '123456', result: true },
+    { value: '1*6', content: '123456', result: true },
+    { value: '1*6', content: '12345', result: false },
+    { value: '1*7', content: '123456', result: false },
+    { value: '*7', content: '123456', result: false },
+    { value: '*6', content: '123456', result: true },
+    { value: '12*6', content: '123456', result: true },
+    { value: '1*2*6', content: '123456', result: true },
+    { value: '1*4*', content: '123456', result: true },
+    { value: '1*45*', content: '123456', result: true },
+    { value: '**', content: '123456', result: false },
+  ]
+
+  for (const case_ of cases) {
+    t.equal(wildcardMatch(case_.value, case_.content), case_.result, `${case_.value} ${case_.content} => ${case_.result}`)
   }
 })

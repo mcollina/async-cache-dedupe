@@ -80,7 +80,7 @@ class StorageRedis extends StorageInterface {
    * @param {?string[]} references
    */
   async set (key, value, ttl, references) {
-    // TODO can keys contains * or other special chars?
+    // TODO validate keys, can't contain * or other special chars
     this.log.debug({ msg: 'acd/storage/redis.set key', key, value, ttl, references })
 
     ttl = Number(ttl)
@@ -160,7 +160,7 @@ class StorageRedis extends StorageInterface {
   }
 
   /**
-   * @param {string[]} references
+   * @param {string|string[]} references
    * @returns {string[]} removed keys
    */
   async invalidate (references) {
@@ -172,31 +172,72 @@ class StorageRedis extends StorageInterface {
     this.log.debug({ msg: 'acd/storage/redis.invalidate', references })
 
     try {
-      const reads = references.map(reference => ['smembers', this.getReferenceKeyLabel(reference)])
-      const keys = await this.store.pipeline(reads).exec()
-
-      this.log.debug({ msg: 'acd/storage/redis.invalidate keys', keys })
-
-      const writes = []
-      const removed = []
-      for (let i = 0; i < keys.length; i++) {
-        const key0 = keys[i][1]
-        this.log.debug({ msg: 'acd/storage/redis.invalidate got keys to be invalidated', keys: key0 })
-        for (let j = 0; j < key0.length; j++) {
-          const key1 = key0[j]
-          this.log.debug({ msg: 'acd/storage/redis.del key' + key1 })
-          removed.push(key1)
-          writes.push(['del', key1])
-        }
+      if (Array.isArray(references)) {
+        return await this._invalidateReferences(references)
       }
-
-      await this.store.pipeline(writes).exec()
-      await this.clearReferences(removed)
-      return removed
+      return await this._invalidateReference(references)
     } catch (err) {
       this.log.error({ msg: 'acd/storage/redis.invalidate error', err, references })
       return []
     }
+  }
+
+  /**
+   * @param {string[]} references
+   * @param {[bool=true]} mapReferences
+   * @returns {string[]} removed keys
+   */
+  async _invalidateReferences(references, mapReferences = true) {
+    const reads = references.map(reference => ['smembers', mapReferences ? this.getReferenceKeyLabel(reference) : reference])
+    const keys = await this.store.pipeline(reads).exec()
+
+    this.log.debug({ msg: 'acd/storage/redis._invalidateReferences keys', keys })
+
+    const writes = []
+    const removed = []
+    for (let i = 0; i < keys.length; i++) {
+      const key0 = keys[i][1]
+      this.log.debug({ msg: 'acd/storage/redis._invalidateReferences got keys to be invalidated', keys: key0 })
+      for (let j = 0; j < key0.length; j++) {
+        const key1 = key0[j]
+        this.log.debug({ msg: 'acd/storage/redis._invalidateReferences del key' + key1 })
+        removed.push(key1)
+        writes.push(['del', key1])
+      }
+    }
+
+    await this.store.pipeline(writes).exec()
+    await this.clearReferences(removed)
+    return removed
+  }
+
+  /**
+   * @param {string} reference
+   * @returns {string[]} removed keys
+   */
+  async _invalidateReference(reference) {
+    let keys
+    if (reference.includes('*')) {
+      const references = await this.store.keys(this.getReferenceKeyLabel(reference))
+      return this._invalidateReferences(references, false)
+    } else {
+      keys = await this.store.smembers(this.getReferenceKeyLabel(reference))
+    }
+
+    this.log.debug({ msg: 'acd/storage/redis._invalidateReference keys', keys })
+
+    const writes = []
+    const removed = []
+    for (let i = 0; i < keys.length; i++) {
+      const key0 = keys[i]
+      this.log.debug({ msg: 'acd/storage/redis._invalidateReference del key' + key0 })
+      removed.push(key0)
+      writes.push(['del', key0])
+    }
+
+    await this.store.pipeline(writes).exec()
+    await this.clearReferences(removed)
+    return removed
   }
 
   /**

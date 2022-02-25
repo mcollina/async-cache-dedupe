@@ -3,6 +3,7 @@
 const t = require('tap')
 const { Cache } = require('../src/cache')
 const createStorage = require('../src/storage')
+const { kStorages } = require('../src/symbol')
 
 const { test } = t
 
@@ -95,6 +96,58 @@ test('Cache', async (t) => {
       cache.invalidate('fiiii', ['references']).catch((err) => {
         t.equal(err.message, 'fiiii is not defined in the cache')
       })
+    })
+  })
+
+  test('invalidateAll', async (t) => {
+    test('should call invalidate on default storage', async (t) => {
+      t.plan(1)
+      const cache = new Cache({
+        storage: {
+          async invalidate(references) {
+            t.same(references, ['foo'])
+          }
+        }
+      })
+      cache.define('f', () => 'the-value')
+
+      await cache.invalidateAll(['foo'])
+    })
+
+    test('should call invalidate on specific storage', async (t) => {
+      t.plan(1)
+      const cache = new Cache({
+        storage: {
+          async invalidate() {
+            t.fail('should not call default storage')
+          }
+        }
+      })
+
+      cache.define('f', { storage: {} }, () => 'the-value')
+      cache[kStorages].get('f').invalidate = async (references) => {
+        t.equal(references, 'foo')
+      }
+
+      await cache.invalidateAll('foo', 'f')
+    })
+
+    test('should rejectes invalidating on non-existing storage', async (t) => {
+      t.plan(1)
+
+      const cache = new Cache({
+        storage: {
+          async invalidate() {
+            t.fail('should not call default storage')
+          }
+        }
+      })
+
+      cache.define('f',
+        { storage: { type: 'memory', options: { size: 1 } } },
+        () => 'the-value')
+
+      await t.rejects(cache.invalidateAll('foo', 'not-a-storage'), `not-a-storage storage is not defined in the cache`)
     })
   })
 

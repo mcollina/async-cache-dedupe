@@ -454,6 +454,81 @@ test('storage redis', async (t) => {
       t.same(await storage.store.smembers('k:e'), ['vowels'])
     })
 
+    test('should invalidate by a string', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
+      await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
+      await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
+
+      await storage.invalidate('fooers')
+
+      t.equal(await storage.get('foo~1'), undefined)
+      t.equal(await storage.get('foo~2'), undefined)
+      t.equal(await storage.get('boo~1'), 'fiz')
+    })
+
+    test('should invalidate by an array of strings', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
+      await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
+      await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
+
+      await storage.invalidate(['fooers', 'booers'])
+
+      t.equal(await storage.get('foo~1'), undefined)
+      t.equal(await storage.get('foo~2'), undefined)
+      t.equal(await storage.get('boo~1'), undefined)
+    })
+
+    test('should invalidate with wildcard one asterisk', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('foo~1', 'bar', 1, ['fooers', 'foo:1'])
+      await storage.set('foo~2', 'baz', 1, ['fooers', 'foo:2'])
+      await storage.set('boo~1', 'fiz', 1, ['booers', 'boo:1'])
+
+      await storage.invalidate('foo:*')
+
+      t.equal(await storage.get('foo~1'), undefined)
+      t.equal(await storage.get('foo~2'), undefined)
+      t.equal(await storage.get('boo~1'), 'fiz')
+    })
+
+    test('should invalidate with wildcard two asterisk', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('foo~01', '0', 1, ['group', 'foo:0x'])
+      await storage.set('foo~02', '0', 1, ['group', 'foo:0x'])
+      await storage.set('foo~11', '1', 1, ['group', 'foo:1x'])
+      await storage.set('foo~12', '1', 1, ['group', 'foo:1x'])
+      await storage.set('boo~1', 'fiz', 1, ['group', 'boo:1x'])
+
+      await storage.invalidate('f*1*')
+
+      t.equal(await storage.get('foo~01'), '0')
+      t.equal(await storage.get('foo~02'), '0')
+      t.equal(await storage.get('foo~11'), undefined)
+      t.equal(await storage.get('foo~12'), undefined)
+      t.equal(await storage.get('boo~1'), 'fiz')
+    })
+
+    test('should invalidate all with wildcard', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await storage.set('a', '0', 1, ['a', 'a:01'])
+      await storage.set('b', '0', 1, ['b', 'b:01'])
+      await storage.set('c', '0', 1, ['c', 'c:01'])
+      await storage.set('d', '0', 1, ['d', 'd:01'])
+      await storage.set('e', '0', 1, ['e', 'e:01'])
+      await storage.set('f', '0', 1, ['f', 'f:01'])
+
+      await storage.invalidate('*')
+
+      t.equal(await storage.get('a'), undefined)
+      t.equal(await storage.get('b'), undefined)
+      t.equal(await storage.get('c'), undefined)
+      t.equal(await storage.get('d'), undefined)
+      t.equal(await storage.get('e'), undefined)
+      t.equal(await storage.get('f'), undefined)
+    })
+
     test('should get a warning with invalidation disabled', async (t) => {
       t.plan(2)
 
