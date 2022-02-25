@@ -1,6 +1,6 @@
 'use strict'
 
-const { kValues, kStorage, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss } = require('./symbol')
+const { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss } = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const createStorage = require('./storage')
 
@@ -40,7 +40,11 @@ class Cache {
     }
 
     this[kValues] = {}
+    
     this[kStorage] = options.storage
+    this[kStorages] = new Map()
+    this[kStorages].set('_default', options.storage)
+
     this[kTTL] = options.ttl || 0
     this[kOnDedupe] = options.onDedupe || noop
     this[kOnError] = options.onError || noop
@@ -88,7 +92,14 @@ class Cache {
       throw new TypeError('references must be a function')
     }
 
-    const storage = opts.storage ? createStorage(opts.storage.type, opts.options) : this[kStorage]
+    let storage
+    if (opts.storage) {
+      storage = createStorage(opts.storage.type, opts.options)
+      this[kStorages].set(name, storage)
+    } else {
+      storage = this[kStorage]
+    }
+
     const ttl = opts.ttl || this[kTTL]
     const onDedupe = opts.onDedupe || this[kOnDedupe]
     const onError = opts.onError || this[kOnError]
@@ -143,9 +154,15 @@ class Cache {
       throw new Error(`${name} is not defined in the cache`)
     }
 
-    // TODO validate references?
-
     return this[kValues][name].invalidate(references)
+  }
+
+  async invalidateAll(references, storage = '_default') {
+    if (!this[kStorages].has(storage)) {
+      throw new Error(`${storage} storage is not defined in the cache`)
+    }
+    const s = this[kStorages].get(storage)
+    await s.invalidate(references)
   }
 }
 

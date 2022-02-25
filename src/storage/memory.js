@@ -3,7 +3,7 @@
 const LRUCache = require('mnemonist/lru-cache')
 const nullLogger = require('abstract-logging')
 const StorageInterface = require('./interface')
-const { findMatchingIndexes, findNotMatching, bsearchIndex } = require('../util')
+const { findMatchingIndexes, findNotMatching, bsearchIndex, wildcardMatch } = require('../util')
 
 const DEFAULT_CACHE_SIZE = 1024
 
@@ -241,7 +241,7 @@ class StorageMemory extends StorageInterface {
   }
 
   /**
-   * @param {string[]} references
+   * @param {string|string[]} references
    * @returns {string[]} removed keys
    */
   invalidate (references) {
@@ -252,27 +252,76 @@ class StorageMemory extends StorageInterface {
 
     this.log.debug({ msg: 'acd/storage/memory.invalidate', references })
 
+    if (Array.isArray(references)) {
+      return this._invalidateReferences(references)
+    }
+    return this._invalidateReference(references)
+  }
+
+  /**
+   * @param {string[]} references
+   * @returns {string[]} removed keys
+   */
+  _invalidateReferences(references) {
     const removed = []
     for (let i = 0; i < references.length; i++) {
       const reference = references[i]
       const keys = this.referencesKeys.get(reference)
-      this.log.debug({ msg: 'acd/storage/memory.invalidate, remove keys on reference', reference, keys })
+      this.log.debug({ msg: 'acd/storage/memory._invalidateReferences, remove keys on reference', reference, keys })
       if (!keys) {
         continue
       }
 
       for (let j = 0; j < keys.length; j++) {
         const key = keys[j]
-        this.log.debug({ msg: 'acd/storage/memory.invalidate, remove key on reference', reference, key })
+        this.log.debug({ msg: 'acd/storage/memory._invalidateReferences, remove key on reference', reference, key })
         // istanbul ignore next
         if (this._removeKey(key)) {
           removed.push(key)
         }
       }
 
-      this.log.debug({ msg: 'acd/storage/memory.invalidate, remove references of', reference, keys })
+      this.log.debug({ msg: 'acd/storage/memory._invalidateReferences, remove references of', reference, keys })
       this._removeReferences([...keys])
     }
+
+    return removed
+  }
+
+  /**
+   * @param {string} reference
+   * @returns {string[]} removed keys
+   */
+  _invalidateReference(reference) {
+    if (reference.includes('*')) {
+      const references = []
+      for (const key of this.referencesKeys.keys()) {
+        if (wildcardMatch(reference, key)) {
+          references.push(key)
+        }
+      }
+      return this._invalidateReferences(references)
+    }
+
+    const keys = this.referencesKeys.get(reference)
+    const removed = []
+    this.log.debug({ msg: 'acd/storage/memory._invalidateReference, remove keys on reference', reference, keys })
+
+    if (!keys) {
+      return removed
+    }
+
+    for (let j = 0; j < keys.length; j++) {
+      const key = keys[j]
+      this.log.debug({ msg: 'acd/storage/memory._invalidateReference, remove key on reference', reference, key })
+      // istanbul ignore next
+      if (this._removeKey(key)) {
+        removed.push(key)
+      }
+    }
+
+    this.log.debug({ msg: 'acd/storage/memory._invalidateReference, remove references of', reference, keys })
+    this._removeReferences([...keys])
 
     return removed
   }

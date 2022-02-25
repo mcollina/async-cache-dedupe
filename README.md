@@ -118,6 +118,47 @@ Options:
 Clear the cache. If `name` is specified, all the cache entries from the function defined with that name are cleared.
 If `arg` is specified, only the elements cached with the given `name` and `arg` are cleared.
 
+### `cache.invalidateAll(references, [storage])`
+
+`cache.invalidateAll` perform invalidation over the whole storage; if `storage` is not specified - using the same `name` as the defined function, invalidation is made over the default storage.
+
+`references` can be:
+
+* a single reference
+* an array of references (without wildcard)
+* a matching reference with wildcard, same logic for `memory` and `redis`
+
+Exmple
+
+```js
+const cache = createCache({ ttl: 60 })
+
+cache.define('fetchUser', {
+  references: (args, key, result) => result ? [`user:${result.id}`] : null
+}, (id) => database.find({ table: 'users', where: { id }}))
+
+cache.define('fetchCountries', {
+  storage: { type: 'memory', size: 256 },
+  references: (args, key, result) => [`countries`]
+}, (id) => database.find({ table: 'countries' }))
+
+// ...
+
+// invalidate all users from default storage
+cache.invalidateAll('user:*')
+
+// invalidate user 1 from default storage
+cache.invalidateAll('user:1')
+
+// invalidate user 1 and user 2 from default storage
+cache.invalidateAll(['user:1', 'user:2'])
+
+// note "fetchCountries" uses a different storage
+cache.invalidateAll('countries', 'fetchCountries')
+```
+
+See below how invalidation and references work.
+
 ## Invalidation
 
 Along with `time to live` invalidation of the cache entries, we can use invalidation by keys.  
