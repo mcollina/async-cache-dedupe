@@ -96,17 +96,17 @@ function randomSubset (array, size) {
 }
 
 /**
- * @param {!string} value substring to search in content, supporting wildcard 
+ * @param {!string} value substring to search in content, supporting wildcard
  * @param {!string} content string to search in
  * @return {boolean} true if value is in content
  * @example wildcardMatch("1*5", "12345") > true
  * @example wildcardMatch("1*6", "12345") > false
  */
-function wildcardMatch(value, content) {
+function wildcardMatch (value, content) {
   if (value === '*') return true
   if (value.length === content.length && value === content) return true
 
-  let i = 0, j = 0
+  let i = 0; let j = 0
   while (i < value.length && j < content.length) {
     if (value[i] === content[j]) {
       i++

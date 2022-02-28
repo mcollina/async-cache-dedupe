@@ -63,7 +63,7 @@ test('wildcardMatch', async t => {
     { value: '1*2*6', content: '123456', result: true },
     { value: '1*4*', content: '123456', result: true },
     { value: '1*45*', content: '123456', result: true },
-    { value: '**', content: '123456', result: false },
+    { value: '**', content: '123456', result: false }
   ]
 
   for (const case_ of cases) {

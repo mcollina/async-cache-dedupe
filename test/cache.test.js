@@ -104,7 +104,7 @@ test('Cache', async (t) => {
       t.plan(1)
       const cache = new Cache({
         storage: {
-          async invalidate(references) {
+          async invalidate (references) {
             t.same(references, ['foo'])
           }
         }
@@ -118,7 +118,7 @@ test('Cache', async (t) => {
       t.plan(1)
       const cache = new Cache({
         storage: {
-          async invalidate() {
+          async invalidate () {
             t.fail('should not call default storage')
           }
         }
@@ -137,7 +137,7 @@ test('Cache', async (t) => {
 
       const cache = new Cache({
         storage: {
-          async invalidate() {
+          async invalidate () {
             t.fail('should not call default storage')
           }
         }
@@ -147,7 +147,7 @@ test('Cache', async (t) => {
         { storage: { type: 'memory', options: { size: 1 } } },
         () => 'the-value')
 
-      await t.rejects(cache.invalidateAll('foo', 'not-a-storage'), `not-a-storage storage is not defined in the cache`)
+      await t.rejects(cache.invalidateAll('foo', 'not-a-storage'), 'not-a-storage storage is not defined in the cache')
     })
   })
 
