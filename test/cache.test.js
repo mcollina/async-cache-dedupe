@@ -18,6 +18,15 @@ test('Cache', async (t) => {
     t.ok(typeof cache.invalidate === 'function')
   })
 
+  test('define', async (t) => {
+      test('should define an instance with storage options', async (t) => {
+      const cache = new Cache({ storage: createStorage() })
+      
+      cache.define('different-storage', { storage: createStorage('memory', { invalidation: true  }) }, () => {})
+      t.equal(cache[kStorages].get('different-storage').invalidation, true)    
+    })
+  })
+
   test('get', async (t) => {
     test('should use storage to get a value', async (t) => {
       t.plan(1)
