@@ -19,11 +19,11 @@ test('Cache', async (t) => {
   })
 
   test('define', async (t) => {
-      test('should define an instance with storage options', async (t) => {
+    test('should define an instance with storage options', async (t) => {
       const cache = new Cache({ storage: createStorage() })
-      
-      cache.define('different-storage', { storage: createStorage('memory', { invalidation: true  }) }, () => {})
-      t.equal(cache[kStorages].get('different-storage').invalidation, true)    
+
+      cache.define('different-storage', { storage: createStorage('memory', { invalidation: true }) }, () => {})
+      t.equal(cache[kStorages].get('different-storage').invalidation, true)
     })
   })
 
