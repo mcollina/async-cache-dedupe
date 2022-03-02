@@ -94,7 +94,7 @@ class Cache {
 
     let storage
     if (opts.storage) {
-      storage = createStorage(opts.storage.type, opts.storage.options)      
+      storage = createStorage(opts.storage.type, opts.storage.options)
       this[kStorages].set(name, storage)
     } else {
       storage = this[kStorage]
