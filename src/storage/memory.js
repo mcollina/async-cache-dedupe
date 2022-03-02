@@ -262,7 +262,7 @@ class StorageMemory extends StorageInterface {
    * @param {string[]} references
    * @returns {string[]} removed keys
    */
-  _invalidateReferences(references) {
+  _invalidateReferences (references) {
     const removed = []
     for (let i = 0; i < references.length; i++) {
       const reference = references[i]
@@ -292,7 +292,7 @@ class StorageMemory extends StorageInterface {
    * @param {string} reference
    * @returns {string[]} removed keys
    */
-  _invalidateReference(reference) {
+  _invalidateReference (reference) {
     if (reference.includes('*')) {
       const references = []
       for (const key of this.referencesKeys.keys()) {

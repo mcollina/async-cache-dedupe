@@ -9,12 +9,12 @@ const createStorage = require('../src/storage')
 const { Cache, createCache } = require('../')
 
 const dummyStorage = {
-  async get(key) { },
-  async set(key, value, ttl, references) { },
-  async remove(key) { },
-  async invalidate(references) { },
-  async clear() { },
-  async refresh() { }
+  async get (key) { },
+  async set (key, value, ttl, references) { },
+  async remove (key) { },
+  async invalidate (references) { },
+  async clear () { },
+  async refresh () { }
 }
 
 let redisClient
@@ -32,7 +32,7 @@ test('create a Cache that dedupes', async (t) => {
   let dedupes = 0
   const cache = new Cache({
     storage: dummyStorage,
-    onDedupe() {
+    onDedupe () {
       dedupes++
     }
   })
@@ -100,7 +100,7 @@ test('create a cache with the factory function, with default storage', async t =
   let hits = 0
   const cache = createCache({
     ttl: 1,
-    onHit() { hits++ }
+    onHit () { hits++ }
   })
 
   t.ok(cache[kStorage].get)
@@ -120,7 +120,7 @@ test('create a cache with the factory function, with storage', async t => {
   const cache = createCache({
     ttl: 1,
     storage: { type: 'memory', options: { size: 9 } },
-    onHit() { hits++ }
+    onHit () { hits++ }
   })
 
   t.equal(cache[kStorage].size, 9)
@@ -155,7 +155,7 @@ test('works with custom serialize', async (t) => {
   cache.define(
     'fetchSomething',
     {
-      serialize(args) { return args.k }
+      serialize (args) { return args.k }
     },
     async (queries) => {
       return queries
@@ -197,7 +197,7 @@ test('constructor - options', async (t) => {
     })
   })
 
-   test('invalid onError', async (t) => {
+  test('invalid onError', async (t) => {
     t.throws(function () {
       // eslint-disable-next-line no-new
       new Cache({ storage: createStorage(), onError: {} })
@@ -521,7 +521,7 @@ test('automatically expires with no TTL', async (t) => {
   let dedupes = 0
   const cache = new Cache({
     storage: createStorage(),
-    onDedupe() {
+    onDedupe () {
       dedupes++
     }
   })

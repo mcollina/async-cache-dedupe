@@ -40,7 +40,7 @@ class Cache {
     }
 
     this[kValues] = {}
-    
+
     this[kStorage] = options.storage
     this[kStorages] = new Map()
     this[kStorages].set('_default', options.storage)
@@ -157,7 +157,7 @@ class Cache {
     return this[kValues][name].invalidate(references)
   }
 
-  async invalidateAll(references, storage = '_default') {
+  async invalidateAll (references, storage = '_default') {
     if (!this[kStorages].has(storage)) {
       throw new Error(`${storage} storage is not defined in the cache`)
     }

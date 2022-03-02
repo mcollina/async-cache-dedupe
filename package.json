@@ -4,8 +4,8 @@
   "description": "An async deduping cache",
   "main": "index.js",
   "scripts": {
-    "test": "standard **.js | snazzy && tap test/*test.js",
-    "lint:fix": "standard --fix **.js"
+    "test": "standard | snazzy && tap test/*test.js",
+    "lint:fix": "standard --fix"
   },
   "repository": {
     "type": "git",
@@ -41,7 +41,7 @@
   },
   "standard": {
     "ignore": [
-      "example.mjs"
+      "examples/basic.mjs"
     ]
   }
 }

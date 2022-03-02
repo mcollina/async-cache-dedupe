@@ -187,7 +187,7 @@ class StorageRedis extends StorageInterface {
    * @param {[bool=true]} mapReferences
    * @returns {string[]} removed keys
    */
-  async _invalidateReferences(references, mapReferences = true) {
+  async _invalidateReferences (references, mapReferences = true) {
     const reads = references.map(reference => ['smembers', mapReferences ? this.getReferenceKeyLabel(reference) : reference])
     const keys = await this.store.pipeline(reads).exec()
 
@@ -215,7 +215,7 @@ class StorageRedis extends StorageInterface {
    * @param {string} reference
    * @returns {string[]} removed keys
    */
-  async _invalidateReference(reference) {
+  async _invalidateReference (reference) {
     let keys
     if (reference.includes('*')) {
       const references = await this.store.keys(this.getReferenceKeyLabel(reference))
