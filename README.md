@@ -176,7 +176,7 @@ So, when a writing event involving `user {id: 1}` happens (usually an update), w
 
 Explicit invalidation is `disabled` by default, you have to enable it in `storage` settings.
 
-See [mercurius-cache-example](https://github.com/mercurius/mercurius-cache-example) for a complete example.
+See [mercurius-cache-example](https://github.com/mercurius-js/mercurius-cache-example) for a complete example.
 
 ### Redis
 
