@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "standard | snazzy && tap test/*test.js",
-    "lint:fix": "standard --fix"
+    "lint:fix": "standard --fix",
+    "redis": "docker run --rm -p 6379:6379 redis redis-server"
   },
   "repository": {
     "type": "git",
