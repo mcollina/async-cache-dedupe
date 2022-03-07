@@ -580,3 +580,18 @@ test('calls onError listener', async (t) => {
     t.equal(err.message, 'whoops')
   }
 })
+
+test('should call onError when serialize throws exception', async (t) => {
+  t.plan(1)
+
+  const serialize = () => {
+    throw new Error('error serializing')
+  }
+
+  const onError = err => t.equal(err.message, 'error serializing')
+
+  const cache = new Cache({ storage: createStorage(), onError })
+  cache.define('serializeWithError', { serialize }, async k => k)
+
+  await cache.serializeWithError(1)
+})
