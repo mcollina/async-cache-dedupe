@@ -208,18 +208,22 @@ class Wrapper {
   }
 
   add (args) {
-    const key = this.getKey(args)
+    try {
+      const key = this.getKey(args)
 
-    let query = this.dedupes.get(key)
-    if (!query) {
-      query = new Query()
-      this.buildPromise(query, args, key)
-      this.dedupes.set(key, query)
-    } else {
-      this.onDedupe(key)
+      let query = this.dedupes.get(key)
+      if (!query) {
+        query = new Query()
+        this.buildPromise(query, args, key)
+        this.dedupes.set(key, query)
+      } else {
+        this.onDedupe(key)
+      }
+
+      return query.promise
+    } catch (err) {
+      this.onError(err)
     }
-
-    return query.promise
   }
 
   /**
