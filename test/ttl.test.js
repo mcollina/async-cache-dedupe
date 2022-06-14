@@ -74,3 +74,20 @@ test('do not cache failures', async (t) => {
   await t.rejects(cache.fetchSomething(42))
   t.same(await cache.fetchSomething(42), { k: 42 })
 })
+
+test('function ttl has precedence over global ttl', async (t) => {
+  t.plan(1)
+
+  const cache = new Cache({ ttl: 42, storage: createStorage() })
+
+  let callCount = 0
+  cache.define('fetchSomething', { ttl: 0 }, async (query) => {
+    callCount += 1
+    return { k: query }
+  })
+
+  await cache.fetchSomething(42)
+  await cache.fetchSomething(42)
+
+  t.same(callCount, 2)
+})
