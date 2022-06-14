@@ -100,7 +100,7 @@ class Cache {
       storage = this[kStorage]
     }
 
-    const ttl = opts.ttl || this[kTTL]
+    const ttl = opts.ttl !== undefined ? opts.ttl : this[kTTL]
     const onDedupe = opts.onDedupe || this[kOnDedupe]
     const onError = opts.onError || this[kOnError]
     const onHit = opts.onHit || this[kOnHit]
