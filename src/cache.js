@@ -231,15 +231,17 @@ class Wrapper {
    */
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
-    let data = this.storage.get(storageKey)
-    if (data && typeof data.then === 'function') { data = await data }
+    if (this.ttl > 0) {
+      let data = this.storage.get(storageKey)
+      if (data && typeof data.then === 'function') { data = await data }
 
-    if (data !== undefined) {
-      this.onHit(key)
-      return data
+      if (data !== undefined) {
+        this.onHit(key)
+        return data
+      }
+
+      this.onMiss(key)
     }
-
-    this.onMiss(key)
 
     const result = await this.func(args, key)
 
