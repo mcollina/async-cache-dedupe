@@ -32,6 +32,28 @@ test('ttl', async (t) => {
   t.same(await cache.fetchSomething(42), { k: 42 })
 })
 
+test('global ttl is a positive integer', async (t) => {
+  t.plan(1)
+
+  try {
+    // eslint-disable-next-line no-new
+    new Cache({ ttl: 3.14, storage: createStorage() })
+  } catch (err) {
+    t.equal(err.message, 'ttl must be a positive integer greater than 0')
+  }
+})
+
+test('function ttl is a positive integer', async (t) => {
+  t.plan(1)
+
+  const cache = new Cache({ storage: createStorage() })
+  try {
+    cache.define('fetchSomething', { ttl: 3.14 }, async (k) => ({ k }))
+  } catch (err) {
+    t.equal(err.message, 'ttl must be a positive integer greater than 0')
+  }
+})
+
 test('ttl expires', async (t) => {
   t.plan(5)
 

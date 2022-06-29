@@ -19,7 +19,7 @@ class Cache {
       throw new Error('storage is required')
     }
 
-    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0)) {
+    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0 || !Number.isInteger(options.ttl))) {
       throw new Error('ttl must be a positive integer greater than 0')
     }
 
@@ -90,6 +90,10 @@ class Cache {
     const references = opts.references
     if (references && typeof references !== 'function') {
       throw new TypeError('references must be a function')
+    }
+
+    if (opts.ttl && (typeof opts.ttl !== 'number' || opts.ttl < 0 || !Number.isInteger(opts.ttl))) {
+      throw new Error('ttl must be a positive integer greater than 0')
     }
 
     let storage
