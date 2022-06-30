@@ -19,7 +19,7 @@ class Cache {
       throw new Error('storage is required')
     }
 
-    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0)) {
+    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0 || !Number.isInteger(options.ttl))) {
       throw new Error('ttl must be a positive integer greater than 0')
     }
 
@@ -90,6 +90,10 @@ class Cache {
     const references = opts.references
     if (references && typeof references !== 'function') {
       throw new TypeError('references must be a function')
+    }
+
+    if (opts.ttl && (typeof opts.ttl !== 'number' || opts.ttl < 0 || !Number.isInteger(opts.ttl))) {
+      throw new Error('ttl must be a positive integer greater than 0')
     }
 
     let storage
@@ -231,15 +235,17 @@ class Wrapper {
    */
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
-    let data = this.storage.get(storageKey)
-    if (data && typeof data.then === 'function') { data = await data }
+    if (this.ttl > 0) {
+      let data = this.storage.get(storageKey)
+      if (data && typeof data.then === 'function') { data = await data }
 
-    if (data !== undefined) {
-      this.onHit(key)
-      return data
+      if (data !== undefined) {
+        this.onHit(key)
+        return data
+      }
+
+      this.onMiss(key)
     }
-
-    this.onMiss(key)
 
     const result = await this.func(args, key)
 

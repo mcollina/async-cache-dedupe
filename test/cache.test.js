@@ -3,7 +3,7 @@
 const t = require('tap')
 const { Cache } = require('../src/cache')
 const createStorage = require('../src/storage')
-const { kStorages } = require('../src/symbol')
+const { kStorage, kStorages } = require('../src/symbol')
 
 const { test } = t
 
@@ -50,6 +50,24 @@ test('Cache', async (t) => {
       cache.get('fiiii', 'key').catch((err) => {
         t.equal(err.message, 'fiiii is not defined in the cache')
       })
+    })
+
+    test('should bypass storage when ttl is 0', async (t) => {
+      t.plan(1)
+      const cache = new Cache({ storage: createStorage() })
+      cache[kStorage].get = () => {
+        t.fail('should bypass storage')
+      }
+      cache[kStorage].set = () => {
+        t.fail('should bypass storage')
+      }
+      cache.define('f', { ttl: 0 }, async (k) => {
+        t.equal(k, 'foo')
+
+        return { k }
+      })
+
+      await cache.f('foo')
     })
   })
 
