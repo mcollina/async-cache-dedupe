@@ -491,6 +491,28 @@ test('should cache with references', async function (t) {
   await cache.run(1)
 })
 
+test('should handle error throwing in references function (sync)', async function (t) {
+  const cache = new Cache({ ttl: 60, storage: createStorage() })
+
+  cache.define('references', {
+    references: (args, key, result) => { throw new Error('boom') }
+  }, () => 'the-result')
+
+  t.equal(await cache.references(1), 'the-result')
+  t.equal(await cache.references(1), 'the-result')
+})
+
+test('should handle error throwing in references function (async)', async function (t) {
+  const cache = new Cache({ ttl: 60, storage: createStorage() })
+
+  cache.define('references', {
+    references: async (args, key, result) => { throw new Error('boom') }
+  }, () => 'the-result')
+
+  t.equal(await cache.references(1), 'the-result')
+  t.equal(await cache.references(1), 'the-result')
+})
+
 test('should cache with async references', async function (t) {
   t.plan(1)
 
