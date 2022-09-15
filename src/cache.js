@@ -266,8 +266,8 @@ class Wrapper {
       if (references && typeof references.then === 'function') { references = await references }
       // TODO validate references?
       await this.storage.set(storageKey, result, this.ttl, references)
-    } catch (e) {
-      // onError()
+    } catch (err) {
+      this.onError(err)
     }
 
     return result
