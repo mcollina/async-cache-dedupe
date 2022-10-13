@@ -1,6 +1,6 @@
 {
   "name": "async-cache-dedupe",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "An async deduping cache",
   "main": "index.js",
   "scripts": {
