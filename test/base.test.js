@@ -148,7 +148,7 @@ test('missing function', async (t) => {
 })
 
 test('works with custom serialize', async (t) => {
-  t.plan(2)
+  t.plan(3)
 
   const cache = new Cache({ storage: createStorage() })
 
@@ -165,6 +165,7 @@ test('works with custom serialize', async (t) => {
   const p1 = cache.fetchSomething({ k: 42 })
   const p2 = cache.fetchSomething({ k: 24 })
 
+  t.same([...cache[kValues].fetchSomething.dedupes.keys()], ['42', '24'])
   const res = await Promise.all([p1, p2])
 
   t.same(res, [
@@ -172,7 +173,8 @@ test('works with custom serialize', async (t) => {
     { k: 24 }
   ])
 
-  t.same([...cache[kValues].fetchSomething.dedupes.keys()], ['42', '24'])
+  // Ensure we clean up dedupes
+  t.same([...cache[kValues].fetchSomething.dedupes.keys()], [])
 })
 
 test('constructor - options', async (t) => {

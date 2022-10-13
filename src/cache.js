@@ -280,12 +280,12 @@ class Wrapper {
     query.promise
       .then(result => {
         // clear the dedupe once done
-        this.dedupes.set(key, undefined)
+        this.dedupes.delete(key)
         return result
       })
       .catch(err => {
         this.onError(err)
-        this.dedupes.set(key, undefined)
+        this.dedupes.delete(key)
         // TODO option to remove key from storage on error?
         // we may want to relay on cache if the original function got error
         // then we probably need more option for that
@@ -298,7 +298,7 @@ class Wrapper {
     // TODO validate value?
     if (value) {
       const key = this.getKey(value)
-      this.dedupes.set(key, undefined)
+      this.dedupes.delete(key)
       await this.storage.remove(this.getStorageKey(key))
       return
     }
