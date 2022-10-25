@@ -92,7 +92,7 @@ in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`
 
 Options:
 
-* `ttl`: the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped.
+* `ttl`: a number or a function that returns a number of the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped. The first argument of the function is the result of the original function.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
 * `onDedupe`: a function that is called every time there is defined is deduped.
 * `onError`: a function that is called every time there is a cache error.
@@ -100,7 +100,8 @@ Options:
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
 * `references`: sync or async function to generate references, it receives `(args, key, result)` from the defined function call and must return an array of strings or falsy; see [invalidation](#invalidation) to know how to use them.
-  Example
+
+  Example 1
 
   ```js
     const cache = createCache({ ttl: 60 })
@@ -111,6 +112,25 @@ Options:
     (id) => database.find({ table: 'users', where: { id }}))
 
     await cache.fetchUser(1)
+  ```
+
+  Example 2 - dynamically set `ttl` based on result.
+  
+  ```js
+  const cache = createCache()
+
+  cache.define('fetchAccessToken', {
+    ttl: (result) => result.expiresInSeconds
+  }, async () => {
+    
+    const response = await fetch("https://example.com/token");
+    const result = await response.json();
+    // => { "token": "abc", "expiresInSeconds": 60 }
+    
+    return result;
+  })
+
+  await cache.fetchAccessToken()
   ```
 
 ### `cache.clear([name], [arg])`
@@ -128,7 +148,7 @@ If `arg` is specified, only the elements cached with the given `name` and `arg` 
 * an array of references (without wildcard)
 * a matching reference with wildcard, same logic for `memory` and `redis`
 
-Exmple
+Example
 
 ```js
 const cache = createCache({ ttl: 60 })
