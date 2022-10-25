@@ -120,9 +120,9 @@ test('ttl as a function', async (t) => {
   const cache = new Cache({ storage: createStorage() })
 
   let callCount = 0
-  cache.define('fetchSomething', { ttl: () => 2 }, async (query) => {
+  cache.define('fetchSomething', { ttl: ({ expiresInSeconds }) => expiresInSeconds }, async (query) => {
     callCount += 1
-    return { k: query }
+    return { k: query, expiresInSeconds: 2 }
   })
 
   await cache.fetchSomething(42)
