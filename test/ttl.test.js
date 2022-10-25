@@ -113,3 +113,24 @@ test('function ttl has precedence over global ttl', async (t) => {
 
   t.same(callCount, 2)
 })
+
+test('ttl as a function', async (t) => {
+  t.plan(2)
+
+  const cache = new Cache({ storage: createStorage() })
+
+  let callCount = 0
+  cache.define('fetchSomething', { ttl: () => 2 }, async (query) => {
+    callCount += 1
+    return { k: query }
+  })
+
+  await cache.fetchSomething(42)
+  await cache.fetchSomething(42)
+  await cache.fetchSomething(42)
+  t.same(callCount, 1)
+
+  await sleep(3000)
+  await cache.fetchSomething(42)
+  t.same(callCount, 2)
+})
