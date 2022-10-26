@@ -92,8 +92,10 @@ class Cache {
       throw new TypeError('references must be a function')
     }
 
-    if (opts.ttl && (typeof opts.ttl !== 'number' || opts.ttl < 0 || !Number.isInteger(opts.ttl))) {
-      throw new Error('ttl must be a positive integer greater than 0')
+    if (typeof opts.ttl !== 'function') {
+      if (opts.ttl && (typeof opts.ttl !== 'number' || opts.ttl < 0 || !Number.isInteger(opts.ttl))) {
+        throw new Error('ttl must be a positive integer greater than 0')
+      }
     }
 
     let storage
@@ -235,7 +237,7 @@ class Wrapper {
    */
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
-    if (this.ttl > 0) {
+    if (this.ttl > 0 || typeof this.ttl === 'function') {
       let data = this.storage.get(storageKey)
       if (data && typeof data.then === 'function') { data = await data }
 
@@ -253,8 +255,10 @@ class Wrapper {
       return result
     }
 
+    const ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
+
     if (!this.references) {
-      let p = this.storage.set(storageKey, result, this.ttl)
+      let p = this.storage.set(storageKey, result, ttl)
       if (p && typeof p.then === 'function') {
         p = await p
       }
@@ -265,7 +269,7 @@ class Wrapper {
       let references = this.references(args, key, result)
       if (references && typeof references.then === 'function') { references = await references }
       // TODO validate references?
-      await this.storage.set(storageKey, result, this.ttl, references)
+      await this.storage.set(storageKey, result, ttl, references)
     } catch (err) {
       this.onError(err)
     }
