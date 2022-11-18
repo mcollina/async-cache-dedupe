@@ -19,7 +19,8 @@ class Cache {
       throw new Error('storage is required')
     }
 
-    if (options.ttl && (typeof options.ttl !== 'number' || options.ttl < 0 || !Number.isInteger(options.ttl))) {
+    // ttl _may_ be a function to defer the ttl decision until later
+    if (options.ttl && typeof options.ttl === 'number' && (options.ttl < 0 || !Number.isInteger(options.ttl))) {
       throw new Error('ttl must be a positive integer greater than 0')
     }
 
@@ -250,12 +251,14 @@ class Wrapper {
     }
 
     const result = await this.func(args, key)
-
-    if (this.ttl < 1) {
+    const ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
+    if (ttl === undefined || ttl === null || (typeof ttl !== 'number' || !Number.isInteger(ttl))) {
+      this.onError(new Error('ttl must be an integer'))
       return result
     }
-
-    const ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
+    if (ttl < 1) {
+      return result
+    }
 
     if (!this.references) {
       let p = this.storage.set(storageKey, result, ttl)

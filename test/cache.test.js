@@ -71,6 +71,92 @@ test('Cache', async (t) => {
     })
   })
 
+  test('should bypass setting value in storage if ttl function returns 0', async (t) => {
+    t.plan(1)
+    const cache = new Cache({ storage: createStorage() })
+    cache[kStorage].set = () => {
+      t.fail('should bypass storage')
+    }
+    cache.define('f', { ttl: (_data) => { return 0 } }, async (k) => {
+      t.equal(k, 'foo')
+
+      return { k }
+    })
+
+    await cache.f('foo')
+  })
+
+  test('should set value in storage if ttl function returns > 0', async (t) => {
+    t.plan(4)
+    const cache = new Cache({ storage: createStorage() })
+    cache[kStorage].set = (key, value, ttl) => {
+      t.equal(key, 'f~foo')
+      t.equal(value.k, 'foo')
+      t.equal(ttl, 1)
+    }
+    cache.define('f', { ttl: (data) => { return 1 } }, async (k) => {
+      t.equal(k, 'foo')
+
+      return { k }
+    })
+
+    await cache.f('foo')
+  })
+
+  test('should call onError and bypass storage if ttl fn returns non-integer', async (t) => {
+    t.plan(2)
+    const cache = new Cache({ storage: createStorage() })
+    cache[kStorage].set = () => {
+      t.fail('should bypass storage')
+    }
+    const onError = (err) => {
+      t.equal(err.message, 'ttl must be an integer')
+    }
+    cache.define('f', { ttl: (data) => { return 3.14 }, onError }, async (k) => {
+      t.equal(k, 'foo')
+
+      return { k }
+    })
+
+    await cache.f('foo')
+  })
+
+  test('should call onError and bypass storage if ttl fn returns undefined', async (t) => {
+    t.plan(2)
+    const cache = new Cache({ storage: createStorage() })
+    cache[kStorage].set = () => {
+      t.fail('should bypass storage')
+    }
+    const onError = (err) => {
+      t.equal(err.message, 'ttl must be an integer')
+    }
+    cache.define('f', { ttl: (data) => { return undefined }, onError }, async (k) => {
+      t.equal(k, 'foo')
+
+      return { k }
+    })
+
+    await cache.f('foo')
+  })
+
+  test('should call onError and bypass storage if ttl fn returns non-number', async (t) => {
+    t.plan(2)
+    const cache = new Cache({ storage: createStorage() })
+    cache[kStorage].set = () => {
+      t.fail('should bypass storage')
+    }
+    const onError = (err) => {
+      t.equal(err.message, 'ttl must be an integer')
+    }
+    cache.define('f', { ttl: (data) => { return '3' }, onError }, async (k) => {
+      t.equal(k, 'foo')
+
+      return { k }
+    })
+
+    await cache.f('foo')
+  })
+
   test('set', async (t) => {
     test('should use storage to set a value', async (t) => {
       t.plan(4)
