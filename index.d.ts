@@ -115,4 +115,4 @@ declare function createStorage(
   options: StorageRedisOptions | StorageMemoryOptions
 ): StorageInterface;
 
-export { createCache, Cache, createStorage };
+export { createCache, Cache, createStorage, StorageInterface, StorageMemoryOptions };
