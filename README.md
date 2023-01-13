@@ -279,6 +279,36 @@ setInterval(() => {
 
 ---
 
+## TypeScript
+
+This module provides a basic type definition for TypeScript.  
+As the library does some meta-programming and magic stuff behind the scenes, your compiler could yell at you when defining functions using the `define` property.  
+To avoid this, our suggestion is to use a [`Union Type`](https://www.typescriptlang.org/docs/handbook/unions-and-intersections.html) in combination with the given `Cache` type as below:
+
+```ts
+import { createCache } from 'async-cache-dedupe'
+
+const fetchSomething = async (k: any) => {
+  console.log("query", k);
+  return { k };
+};
+
+export type CachedFunctions = {
+  fetchSomething: typeof fetchSomething;
+}; // <--- This is where you define all the functions you want to cache
+
+const cache = createCache({
+  ttl: 5, // seconds
+  storage: { type: 'memory' },
+}) as Cache & CachedFunctions // <--- This is where you tell the compiler to consider both the Cache type and your custom type
+
+cache.define('fetchSomething', fetchSomething)
+
+const p1 = cache.fetchSomething(42) // <--- TypeScript doesn't argue anymore here!
+```
+
+---
+
 ## Maintainers
 
 * [__Matteo Collina__](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
