@@ -977,4 +977,44 @@ test('storage redis', async (t) => {
       })
     })
   })
+
+  test('getTTL', async (t) => {
+    test('should get the TTL of a previously key stored', async (t) => {
+      const storage = new StorageRedis({ client: redisClient, invalidation: false })
+
+      storage.set('foo', 'bar', 100)
+
+      t.equal(await storage.getTTL('foo'), 100)
+
+      await sleep(1000)
+
+      t.equal(await storage.getTTL('foo'), 99)
+    })
+
+    test('should get the TTL of a a key without TTL', async (t) => {
+      const storage = new StorageRedis({ client: redisClient, invalidation: false })
+
+      storage.set('foo', 'bar', 0)
+
+      t.equal(await storage.getTTL('foo'), 0)
+    })
+
+    test('should get the TTL of a previously key stored', async (t) => {
+      const storage = new StorageRedis({ client: redisClient, invalidation: false })
+
+      storage.set('foo', 'bar', 1)
+
+      t.equal(await storage.getTTL('foo'), 1)
+
+      await sleep(1000)
+
+      t.equal(await storage.getTTL('foo'), 0)
+    })
+
+    test('no key', async (t) => {
+      const storage = new StorageRedis({ client: redisClient, invalidation: false })
+
+      t.equal(await storage.getTTL('foo'), 0)
+    })
+  })
 })
