@@ -73,6 +73,24 @@ class StorageRedis extends StorageInterface {
   }
 
   /**
+   * retrieve the remaining TTL value by key
+   * @param {string} key
+   * @returns {undefined|*} undefined if key not found or expired
+   */
+  async getTTL (key) {
+    this.log.debug({ msg: 'acd/storage/memory.getTTL', key })
+
+    let pttl = await this.store.pttl(key)
+    if (pttl < 0) {
+      return 0
+    }
+
+    pttl = Math.ceil(pttl / 1000)
+
+    return pttl
+  }
+
+  /**
    * set value by key
    * @param {string} key
    * @param {*} value

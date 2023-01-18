@@ -8,5 +8,6 @@ const kOnDedupe = Symbol('kOnDedupe')
 const kOnError = Symbol('kOnError')
 const kOnHit = Symbol('kOnHit')
 const kOnMiss = Symbol('kOnMiss')
+const kStale = Symbol('kStale')
 
-module.exports = { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss }
+module.exports = { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale }

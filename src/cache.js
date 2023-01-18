@@ -1,6 +1,6 @@
 'use strict'
 
-const { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss } = require('./symbol')
+const { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale } = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const createStorage = require('./storage')
 
@@ -40,6 +40,11 @@ class Cache {
       throw new Error('onMiss must be a function')
     }
 
+    // ttl _may_ be a function to defer the ttl decision until later
+    if (typeof options.stale === 'number' && !(Math.floor(options.stale) === options.stale && options.stale >= 0)) {
+      throw new Error('stale must be an integer greater or equal to 0')
+    }
+
     this[kValues] = {}
 
     this[kStorage] = options.storage
@@ -51,6 +56,7 @@ class Cache {
     this[kOnError] = options.onError || noop
     this[kOnHit] = options.onHit || noop
     this[kOnMiss] = options.onMiss || noop
+    this[kStale] = options.stale || 0
   }
 
   /**
@@ -108,12 +114,13 @@ class Cache {
     }
 
     const ttl = opts.ttl !== undefined ? opts.ttl : this[kTTL]
+    const stale = opts.stale !== undefined ? opts.stale : this[kStale]
     const onDedupe = opts.onDedupe || this[kOnDedupe]
     const onError = opts.onError || this[kOnError]
     const onHit = opts.onHit || this[kOnHit]
     const onMiss = opts.onMiss || this[kOnMiss]
 
-    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss)
+    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss, stale)
 
     this[kValues][name] = wrapper
     this[name] = wrapper.add.bind(wrapper)
@@ -185,8 +192,9 @@ class Wrapper {
    * @param {function} onError
    * @param {function} onHit
    * @param {function} onMiss
+   * @param {stale} ttl
    */
-  constructor (func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss) {
+  constructor (func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss, stale) {
     this.dedupes = new Map()
     this.func = func
     this.name = name
@@ -199,6 +207,7 @@ class Wrapper {
     this.onError = onError
     this.onHit = onHit
     this.onMiss = onMiss
+    this.stale = stale
   }
 
   getKey (args) {
@@ -244,18 +253,29 @@ class Wrapper {
 
       if (data !== undefined) {
         this.onHit(key)
+        if (this.stale > 0) {
+          const remainingTTL = await this.storage.getTTL(storageKey)
+          if (remainingTTL <= this.stale) {
+            this._wrapFunction(storageKey, args, key).catch(noop)
+          }
+        }
         return data
+      } else {
+        this.onMiss(key)
       }
-
-      this.onMiss(key)
     }
 
+    return this._wrapFunction(storageKey, args, key)
+  }
+
+  async _wrapFunction (storageKey, args, key) {
     const result = await this.func(args, key)
-    const ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
+    let ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
     if (ttl === undefined || ttl === null || (typeof ttl !== 'number' || !Number.isInteger(ttl))) {
       this.onError(new Error('ttl must be an integer'))
       return result
     }
+    ttl += this.stale
     if (ttl < 1) {
       return result
     }

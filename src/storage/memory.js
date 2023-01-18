@@ -68,6 +68,26 @@ class StorageMemory extends StorageInterface {
   }
 
   /**
+   * retrieve the remaining TTL value by key
+   * @param {string} key
+   * @returns {undefined|*} undefined if key not found or expired
+   */
+  getTTL (key) {
+    this.log.debug({ msg: 'acd/storage/memory.getTTL', key })
+
+    const entry = this.store.peek(key)
+    let ttl = 0
+    if (entry) {
+      ttl = entry.start + entry.ttl - now()
+      if (ttl < 0) {
+        ttl = 0
+      }
+    }
+
+    return ttl
+  }
+
+  /**
    * set value by key
    * @param {string} key
    * @param {*} value

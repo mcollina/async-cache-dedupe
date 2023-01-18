@@ -66,6 +66,56 @@ test('storage memory', async (t) => {
     })
   })
 
+  test('getTTL', async (t) => {
+    test('should get the TTL of a previously key stored', async (t) => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 100)
+
+      t.equal(storage.getTTL('foo'), 100)
+
+      await sleep(1000)
+
+      t.equal(storage.getTTL('foo'), 99)
+    })
+
+    test('should get the TTL of a a key without TTL', async (t) => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 0)
+
+      t.equal(storage.getTTL('foo'), 0)
+    })
+
+    test('should get the TTL of a previously key stored', async (t) => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 1)
+
+      t.equal(storage.getTTL('foo'), 1)
+
+      await sleep(1000)
+
+      t.equal(storage.getTTL('foo'), 0)
+    })
+
+    test('no key', async (t) => {
+      const storage = createStorage('memory')
+
+      t.equal(storage.getTTL('foo'), 0)
+    })
+
+    test('should get the TTL of a previously key stored', async (t) => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 1)
+
+      await sleep(2000)
+
+      t.equal(storage.getTTL('foo'), 0)
+    })
+  })
+
   test('set', async (t) => {
     test('should set a value, with ttl', async (t) => {
       const storage = createStorage('memory')
