@@ -270,11 +270,12 @@ class Wrapper {
 
   async _wrapFunction (storageKey, args, key) {
     const result = await this.func(args, key)
-    const ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
+    let ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
     if (ttl === undefined || ttl === null || (typeof ttl !== 'number' || !Number.isInteger(ttl))) {
       this.onError(new Error('ttl must be an integer'))
       return result
     }
+    ttl += this.stale
     if (ttl < 1) {
       return result
     }
