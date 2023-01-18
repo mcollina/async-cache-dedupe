@@ -52,7 +52,7 @@ Creates a new cache.
 Options:
 
 * `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as the promise resolves.
-* `stale`: the time after which the cache is revalidated but the value is served from the cache.
+* `stale`: the time after which the value is served from the cache after the ttl has expired.
 * `onDedupe`: a function that is called every time it is defined is deduped.
 * `onError`: a function that is called every time there is a cache error.
 * `onHit`: a function that is called every time there is a hit in the cache.
@@ -94,7 +94,7 @@ in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`
 Options:
 
 * `ttl`: a number or a function that returns a number of the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped. The first argument of the function is the result of the original function.
-* `stale`: the time after which the cache is revalidated but the value is served from the cache.
+* `stale`: the time after which the value is served from the cache after the ttl has expired.
 * `serialize`: a function to convert the given argument into a serializable object (or string).
 * `onDedupe`: a function that is called every time there is defined is deduped.
 * `onError`: a function that is called every time there is a cache error.
