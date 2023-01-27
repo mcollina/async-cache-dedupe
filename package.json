@@ -7,7 +7,7 @@
   "scripts": {
     "test": "standard | snazzy && tap test/*test.js && tsd",
     "test:prepare": "node test/browser/helpers/runner-prepare.mjs",
-    "test:browsers": "node test/browser/helpers/runner-browser.mjs",
+    "test:browser": "node test/browser/helpers/runner-browser.mjs",
     "lint:fix": "standard --fix",
     "redis": "docker run --rm -p 6379:6379 redis redis-server"
   },
