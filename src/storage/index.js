@@ -27,6 +27,11 @@ const StorageOptionsType = {
  * @returns {StorageMemory|StorageRedis}
  */
 function createStorage (type, options) {
+  // istanbul ignore next 3
+  if (typeof window !== 'undefined' && type === StorageOptionsType.redis) {
+    throw new Error('Redis storage is not supported in the browser')
+  }
+
   if (type === StorageOptionsType.redis) {
     return new StorageRedis(options)
   }
