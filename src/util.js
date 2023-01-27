@@ -127,11 +127,23 @@ function wildcardMatch (value, content) {
   return i >= value.length - 1
 }
 
+function abstractLogging () {
+  const noop = () => {}
+  return {
+    fatal: noop,
+    error: noop,
+    warn: noop,
+    info: noop,
+    debug: noop,
+    trace: noop
+  }
+}
+
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
   bsearchIndex,
   wildcardMatch,
-
-  randomSubset
+  randomSubset,
+  abstractLogging
 }

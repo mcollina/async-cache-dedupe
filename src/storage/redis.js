@@ -1,9 +1,8 @@
 'use strict'
 
 const stringify = require('safe-stable-stringify')
-const nullLogger = require('abstract-logging')
 const StorageInterface = require('./interface')
-const { findNotMatching, randomSubset } = require('../util')
+const { findNotMatching, randomSubset, abstractLogging } = require('../util')
 
 const GC_DEFAULT_CHUNK = 64
 const GC_DEFAULT_LAZY_CHUNK = 64
@@ -33,7 +32,7 @@ class StorageRedis extends StorageInterface {
       throw new Error('invalidation.referencesTTL must be a positive integer greater than 1')
     }
 
-    this.log = options.log || nullLogger
+    this.log = options.log || abstractLogging()
     this.store = options.client
     this.invalidation = !!options.invalidation
     this.referencesTTL = (options.invalidation && options.invalidation.referencesTTL) || REFERENCES_DEFAULT_TTL

@@ -51,7 +51,6 @@
     "tsd": "^0.25.0"
   },
   "dependencies": {
-    "abstract-logging": "^2.0.1",
     "mnemonist": "^0.39.2",
     "safe-stable-stringify": "^2.3.1"
   },
