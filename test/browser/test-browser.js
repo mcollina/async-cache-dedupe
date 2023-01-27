@@ -76,7 +76,7 @@ async function runTests (suites) {
 }
 
 runTests([
-  require('./test-base.js')
+  require('./base.browser.test.js')
 ]).catch((err) => {
   console.error(err)
   process.exit(1)

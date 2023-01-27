@@ -1,6 +1,6 @@
 'use strict'
 
-const { Cache, createCache } = require('../../')
+const { Cache, createCache } = require('../..')
 const createStorage = require('../../src/storage')
 const stringify = require('safe-stable-stringify')
 const { kStorage, kValues } = require('../../src/symbol.js')
@@ -622,5 +622,5 @@ module.exports = async function (test) {
   })
 }
 
-module.exports[kAsyncCacheDedupeSuiteName] = 'async-cache-dedupe-base'
+module.exports[kAsyncCacheDedupeSuiteName] = 'base browser suite'
 module.exports[kAsyncCacheDedupeSuiteHasMultipleTests] = true
