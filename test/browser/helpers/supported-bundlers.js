@@ -1,5 +1,5 @@
 'use strict'
 
-const supportedBundlers = ['esbuild', 'rollup']
+const supportedBundlers = ['esbuild', 'rollup', 'webpack']
 
 module.exports = { supportedBundlers }
