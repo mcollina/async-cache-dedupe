@@ -89,6 +89,10 @@ async function main () {
       await run('node test/browser/fixtures/esbuild.browser.config.mjs')
       break
     }
+    case 'rollup': {
+      await run('rollup -c test/browser/fixtures/rollup.browser.config.mjs')
+      break
+    }
   }
 }
 
