@@ -1,6 +1,6 @@
 import { supportedBrowsers } from './supported-browsers.js'
 import { supportedBundlers } from './supported-bundlers.js'
-import { chromium } from 'playwright'
+import { chromium, firefox } from 'playwright'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Readable } from 'node:stream'
@@ -28,6 +28,8 @@ function createBrowser ({ browser, headless }) {
   switch (browser) {
     case 'edge':
       return chromium.launch({ headless, channel: 'msedge' })
+    case 'firefox':
+      return firefox.launch({ headless })
     default:
       return chromium.launch({ headless })
   }
