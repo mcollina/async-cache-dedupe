@@ -85,6 +85,10 @@ async function main () {
   await copyFile(sourceIndex, targetIndex)
 
   switch (bundler) {
+    case 'browserify': {
+      await run('browserify test/browser/test-browser.js -o tmp/browserify/suite.browser.js')
+      break
+    }
     case 'esbuild': {
       await run('node test/browser/fixtures/esbuild.browser.config.mjs')
       break
