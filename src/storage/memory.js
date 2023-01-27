@@ -401,7 +401,9 @@ function now () {
     return _timer
   }
   _timer = Math.floor(Date.now() / 1000)
-  setTimeout(_clearTimer, 1000).unref()
+  const timeout = setTimeout(_clearTimer, 1000)
+  // istanbul ignore next
+  if (typeof timeout.unref === 'function') timeout.unref()
   return _timer
 }
 
