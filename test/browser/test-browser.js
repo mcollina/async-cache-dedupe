@@ -80,7 +80,8 @@ runTests([
   require('./cache.browser.test.js'),
   require('./clear.browser.test.js'),
   require('./stale.browser.test.js'),
-  require('./storage-base.browser.test.js')
+  require('./storage-base.browser.test.js'),
+  require('./storage-memory.browser.test.js')
 ]).catch((err) => {
   console.error(err)
   process.exit(1)
