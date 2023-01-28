@@ -2,9 +2,8 @@
 
 const { Cache } = require('../..')
 const createStorage = require('../../src/storage')
+const { sleep } = require('./helpers/util.js')
 const { kAsyncCacheDedupeSuiteName, kAsyncCacheDedupeSuiteHasMultipleTests } = require('./helpers/symbols.js')
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 module.exports = async function (test) {
   test('ttl', async (t) => {
