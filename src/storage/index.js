@@ -1,6 +1,12 @@
 'use strict'
 
-const StorageRedis = require('./redis')
+const { isServerSide } = require('../util')
+
+let StorageRedis
+// istanbul ignore next 3
+if (isServerSide) {
+  StorageRedis = require('./redis')
+}
 const StorageMemory = require('./memory')
 
 /**
@@ -28,7 +34,7 @@ const StorageOptionsType = {
  */
 function createStorage (type, options) {
   // istanbul ignore next 3
-  if (typeof window !== 'undefined' && type === StorageOptionsType.redis) {
+  if (!isServerSide && type === StorageOptionsType.redis) {
     throw new Error('Redis storage is not supported in the browser')
   }
 

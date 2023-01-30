@@ -18,7 +18,8 @@ build({
   define: {
     global: 'globalThis'
   },
-  inject: ['test/browser/fixtures/esbuild.browser-shims.mjs']
+  inject: ['test/browser/fixtures/esbuild.browser-shims.mjs'],
+  external: ['./src/storage/redis.js']
 }).catch((err) => {
   console.log(err)
   process.exit(1)

@@ -139,11 +139,14 @@ function abstractLogging () {
   }
 }
 
+const isServerSide = typeof window === 'undefined'
+
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
   bsearchIndex,
   wildcardMatch,
   randomSubset,
-  abstractLogging
+  abstractLogging,
+  isServerSide
 }

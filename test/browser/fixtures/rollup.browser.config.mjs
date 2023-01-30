@@ -6,8 +6,9 @@ import nodePolyfill from 'rollup-plugin-polyfill-node'
 
 export default {
   input: ['test/browser/test-browser.js'],
+  external: ['./src/storage/redis.js'],
   output: {
-    intro: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 1) }',
+    intro: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 0) }',
     file: 'tmp/rollup/suite.browser.js',
     format: 'iife',
     name: 'asyncDedupeStorageTestSuite'

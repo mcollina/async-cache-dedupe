@@ -12,12 +12,13 @@ export default {
     filename: 'suite.browser.js',
     path: resolve(rootDir, 'tmp/webpack')
   },
+  externals: ['./src/storage/redis.js'],
   mode: 'production',
   target: 'web',
   performance: false,
   plugins: [
     new webpack.BannerPlugin({
-      banner: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 1) }',
+      banner: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 0) }',
       raw: true
     }),
     new webpack.ProvidePlugin({

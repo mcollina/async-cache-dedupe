@@ -86,7 +86,7 @@ async function main () {
 
   switch (bundler) {
     case 'browserify': {
-      await run('browserify test/browser/test-browser.js -o tmp/browserify/suite.browser.js')
+      await run('browserify test/browser/test-browser.js -o tmp/browserify/suite.browser.js -u ./src/storage/redis.js')
       break
     }
     case 'esbuild': {
