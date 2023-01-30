@@ -33,6 +33,16 @@ jobs:
         with:
           node-version: 18
 
+      - name: Restore cached playwright dependency
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: | # playwright installs browsers into .local-browsers
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            %LOCALAPPDATA%\ms-playwright
+          key: ${{ matrix.os }}-playwright-${{ hashFiles('package.json') }}
+
       - name: Restore cached dependencies
         uses: actions/cache@v3
         with:
@@ -42,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install Browser
+      - name: Install browser
         run: ./node_modules/.bin/playwright install ${{ fromJSON('{"chrome":"chromium","edge":"msedge","firefox":"firefox","safari":"webkit"}')[matrix.browser] }}
 
       - name: Bundle code
