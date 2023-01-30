@@ -97,6 +97,10 @@ async function main () {
       await run('rollup -c test/browser/fixtures/rollup.browser.config.mjs')
       break
     }
+    case 'vite': {
+      await run('vite build --config test/browser/fixtures/vite.browser.config.mjs')
+      break
+    }
     case 'webpack': {
       await run('webpack -c test/browser/fixtures/webpack.browser.config.mjs')
       break
