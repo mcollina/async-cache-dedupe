@@ -1,7 +1,6 @@
 'use strict'
 
 const createStorage = require('../../src/storage')
-const { sleep } = require('./helpers/util.js')
 const { kAsyncCacheDedupeSuiteName, kAsyncCacheDedupeSuiteHasMultipleTests } = require('./helpers/symbols.js')
 
 module.exports = async function (test) {
@@ -51,30 +50,9 @@ module.exports = async function (test) {
 
       t.equal(storage.get('no-foo'), undefined)
     })
-
-    test('should get undefined retrieving an expired value', { skip: true }, async (t) => {
-      const storage = createStorage('memory')
-
-      storage.set('foo', 'bar', 1)
-      await sleep(2000)
-
-      t.equal(storage.get('foo'), undefined)
-    })
   })
 
   test('getTTL', async (t) => {
-    test('should get the TTL of a previously key stored', { skip: true }, async (t) => {
-      const storage = createStorage('memory')
-
-      storage.set('foo', 'bar', 100)
-
-      t.equal(storage.getTTL('foo'), 100)
-
-      await sleep(1000)
-
-      t.equal(storage.getTTL('foo'), 99)
-    })
-
     test('should get the TTL of a a key without TTL', async (t) => {
       const storage = createStorage('memory')
 
@@ -83,30 +61,8 @@ module.exports = async function (test) {
       t.equal(storage.getTTL('foo'), 0)
     })
 
-    test('should get the TTL of a previously key stored', { skip: true }, async (t) => {
-      const storage = createStorage('memory')
-
-      storage.set('foo', 'bar', 1)
-
-      t.equal(storage.getTTL('foo'), 1)
-
-      await sleep(1000)
-
-      t.equal(storage.getTTL('foo'), 0)
-    })
-
     test('no key', async (t) => {
       const storage = createStorage('memory')
-
-      t.equal(storage.getTTL('foo'), 0)
-    })
-
-    test('should get the TTL of a previously key stored', { skip: true }, async (t) => {
-      const storage = createStorage('memory')
-
-      storage.set('foo', 'bar', 1)
-
-      await sleep(2000)
 
       t.equal(storage.getTTL('foo'), 0)
     })

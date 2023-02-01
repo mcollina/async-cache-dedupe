@@ -2,31 +2,9 @@
 
 const { Cache } = require('../..')
 const createStorage = require('../../src/storage')
-const { sleep } = require('./helpers/util.js')
 const { kAsyncCacheDedupeSuiteName, kAsyncCacheDedupeSuiteHasMultipleTests } = require('./helpers/symbols.js')
 
 module.exports = async function (test) {
-  test('ttl', { skip: true }, async (t) => {
-    t.plan(5)
-
-    const cache = new Cache({
-      storage: createStorage(),
-      ttl: 1
-    })
-
-    cache.define('fetchSomething', async (query) => {
-      t.equal(query, 42)
-      return { k: query }
-    })
-
-    t.same(await cache.fetchSomething(42), { k: 42 })
-    t.same(await cache.fetchSomething(42), { k: 42 })
-
-    await sleep(2500)
-
-    t.same(await cache.fetchSomething(42), { k: 42 })
-  })
-
   test('global ttl is a positive integer', async (t) => {
     t.plan(1)
 
@@ -47,30 +25,6 @@ module.exports = async function (test) {
     } catch (err) {
       t.equal(err.message, 'ttl must be a positive integer greater than 0')
     }
-  })
-
-  test('ttl expires', { skip: true }, async (t) => {
-    t.plan(5)
-
-    const cache = new Cache({
-      storage: createStorage(),
-      ttl: 2
-    })
-
-    cache.define('fetchSomething', async (query) => {
-      t.equal(query, 42)
-      return { k: query }
-    })
-
-    t.same(await cache.fetchSomething(42), { k: 42 })
-
-    await sleep(1000)
-
-    t.same(await cache.fetchSomething(42), { k: 42 })
-
-    await sleep(3000)
-
-    t.same(await cache.fetchSomething(42), { k: 42 })
   })
 
   test('do not cache failures', async (t) => {
@@ -108,27 +62,6 @@ module.exports = async function (test) {
     await cache.fetchSomething(42)
     await cache.fetchSomething(42)
 
-    t.same(callCount, 2)
-  })
-
-  test('ttl as a function', { skip: true }, async (t) => {
-    t.plan(2)
-
-    const cache = new Cache({ storage: createStorage() })
-
-    let callCount = 0
-    cache.define('fetchSomething', { ttl: ({ expiresInSeconds }) => expiresInSeconds }, async (query) => {
-      callCount += 1
-      return { k: query, expiresInSeconds: 2 }
-    })
-
-    await cache.fetchSomething(42)
-    await cache.fetchSomething(42)
-    await cache.fetchSomething(42)
-    t.same(callCount, 1)
-
-    await sleep(3000)
-    await cache.fetchSomething(42)
     t.same(callCount, 2)
   })
 }

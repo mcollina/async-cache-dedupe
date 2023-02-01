@@ -15,8 +15,4 @@ function createDeferredPromise () {
   }
 }
 
-function sleep (ms) {
-  return new Promise((resolve) => setInterval(resolve, ms))
-}
-
-module.exports = { createDeferredPromise, sleep }
+module.exports = { createDeferredPromise }
