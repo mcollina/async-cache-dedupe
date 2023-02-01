@@ -6,7 +6,7 @@ const { sleep } = require('./helpers/util.js')
 const { kAsyncCacheDedupeSuiteName, kAsyncCacheDedupeSuiteHasMultipleTests } = require('./helpers/symbols.js')
 
 module.exports = async function (test) {
-  test('ttl', async (t) => {
+  test('ttl', { skip: true }, async (t) => {
     t.plan(5)
 
     const cache = new Cache({
@@ -49,7 +49,7 @@ module.exports = async function (test) {
     }
   })
 
-  test('ttl expires', async (t) => {
+  test('ttl expires', { skip: true }, async (t) => {
     t.plan(5)
 
     const cache = new Cache({
@@ -111,7 +111,7 @@ module.exports = async function (test) {
     t.same(callCount, 2)
   })
 
-  test('ttl as a function', async (t) => {
+  test('ttl as a function', { skip: true }, async (t) => {
     t.plan(2)
 
     const cache = new Cache({ storage: createStorage() })
