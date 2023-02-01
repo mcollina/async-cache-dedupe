@@ -313,7 +313,7 @@ const p1 = cache.fetchSomething(42) // <--- TypeScript doesn't argue anymore her
 
 ## Browser
 
-This module is designed to work in a browser environment, and is fully compatible with all major browsers. However, it does not support the use of `Redis` as a store. Instead, it utilizes the memory to cache and store the data.
+All the major browser are supported; only `memory` storage type is supported, `redis` storage can't be used in a browser env.
 
 This is a very simple example of how to use this module in a browser environment:
 
