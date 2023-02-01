@@ -47,3 +47,6 @@ expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
 
 const result = await unionMemoryCache.fetchSomething("test");
 expectType<{ k: any }>(result);
+
+await unionMemoryCache.invalidateAll("test:*");
+await unionMemoryCache.invalidateAll(["test:1", "test:2", "test:3"], "memory");
