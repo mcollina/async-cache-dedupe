@@ -99,7 +99,7 @@ declare class Cache {
 
   invalidate(name: string, references: References): Promise<void>;
 
-  invalidateAll(name: string, storage: StorageOptionsType): Promise<void>;
+  invalidateAll(references: References, storage?: StorageOptionsType): Promise<void>;
 }
 
 declare function createStorage(
