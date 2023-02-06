@@ -3,7 +3,6 @@
 const { isServerSide } = require('../util')
 
 let StorageRedis
-// istanbul ignore next 3
 if (isServerSide) {
   StorageRedis = require('./redis')
 }
@@ -33,7 +32,6 @@ const StorageOptionsType = {
  * @returns {StorageMemory|StorageRedis}
  */
 function createStorage (type, options) {
-  // istanbul ignore next 3
   if (!isServerSide && type === StorageOptionsType.redis) {
     throw new Error('Redis storage is not supported in the browser')
   }
