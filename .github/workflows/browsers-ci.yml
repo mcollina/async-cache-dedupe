@@ -55,8 +55,5 @@ jobs:
       - name: Install browser
         run: ./node_modules/.bin/playwright install ${{ fromJSON('{"chrome":"chromium","edge":"msedge","firefox":"firefox","safari":"webkit"}')[matrix.browser] }}
 
-      - name: Bundle code
-        run: npm run test:prepare ${{ matrix.bundler }}
-
       - name: Run Tests on Browsers
         run: npm run test:browser ${{ matrix.browser }} ${{ matrix.bundler }}
