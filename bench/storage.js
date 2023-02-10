@@ -3,7 +3,7 @@
 const { hrtime } = require('process')
 const path = require('path')
 const Redis = require('ioredis')
-const createStorage = require(path.resolve(__dirname, '../storage'))
+const createStorage = require(path.resolve(__dirname, '../src/storage/index.js'))
 
 // NOTE: this is a very basic benchmarks for tweaking
 // performance is effected by keys and references size

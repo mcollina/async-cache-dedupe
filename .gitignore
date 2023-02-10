@@ -108,3 +108,6 @@ dist
 .vscode
 docker-compose.yml
 dump.rdb
+
+# Temporary files used for browser testing
+tmp/

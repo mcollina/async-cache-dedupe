@@ -1,7 +1,7 @@
 'use strict'
 
 const LRUCache = require('mnemonist/lru-cache')
-const nullLogger = require('abstract-logging')
+const { abstractLogging } = require('../util')
 const StorageInterface = require('./interface')
 const { findMatchingIndexes, findNotMatching, bsearchIndex, wildcardMatch } = require('../util')
 
@@ -26,7 +26,7 @@ class StorageMemory extends StorageInterface {
 
     super(options)
     this.size = options.size || DEFAULT_CACHE_SIZE
-    this.log = options.log || nullLogger
+    this.log = options.log || abstractLogging()
     this.invalidation = options.invalidation || false
 
     this.init()
@@ -401,7 +401,9 @@ function now () {
     return _timer
   }
   _timer = Math.floor(Date.now() / 1000)
-  setTimeout(_clearTimer, 1000).unref()
+  const timeout = setTimeout(_clearTimer, 1000)
+  // istanbul ignore next
+  if (typeof timeout.unref === 'function') timeout.unref()
   return _timer
 }
 

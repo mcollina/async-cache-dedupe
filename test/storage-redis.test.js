@@ -1017,4 +1017,14 @@ test('storage redis', async (t) => {
       t.equal(await storage.getTTL('foo'), 0)
     })
   })
+
+  test('should throw if is not server side and storage is redis', async (t) => {
+    const createStorageMock = t.mock('../src/storage/index.js', {
+      '../src/util.js': module.exports = {
+        isServerSide: false
+      }
+    })
+
+    t.throws(() => createStorageMock('redis', { client: redisClient }), 'Redis storage is not supported in the browser')
+  })
 })
