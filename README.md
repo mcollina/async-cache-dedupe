@@ -83,6 +83,25 @@ Options:
       ```js
       createCache({ storage: { type: 'redis', options: { client: new Redis(), invalidation: { referencesTTL: 60 } } } })
       ```
+* `transformer`: the transformer to used to serialize and deserialize the cache entries. 
+  It must be an object with the following methods:
+  * `serialize`: a function that receives the result of the original function and returns a serializable object.
+  * `deserialize`: a function that receives the serialized object and returns the original result.
+
+  * Default is `undefined`, so the default transformer is used.
+
+    Example
+
+    ```js
+    import superjson from 'superjson';
+
+    const cache = createCache({
+      transformer: {
+        serialize: (result) => superjson.serialize(result),
+        deserialize: (serialized) => superjson.deserialize(serialized),
+      }
+    })
+    ```
 
 ### `cache.define(name[, opts], original(arg, cacheKey))`
 
@@ -101,6 +120,7 @@ Options:
 * `onHit`: a function that is called every time there is a hit in the cache.
 * `onMiss`: a function that is called every time the result is not in the cache.
 * `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
+* `transformer`: the transformer to used to serialize and deserialize the cache entries. It's possible to specify different transformers for each defined function for fine-tuning.
 * `references`: sync or async function to generate references, it receives `(args, key, result)` from the defined function call and must return an array of strings or falsy; see [invalidation](#invalidation) to know how to use them.
 
   Example 1
