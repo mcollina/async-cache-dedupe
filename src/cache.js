@@ -255,7 +255,7 @@ class Wrapper {
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
     if (this.ttl > 0 || typeof this.ttl === 'function') {
-      let data = this.storage.get(storageKey)
+      let data = this.get(storageKey)
       if (data && typeof data.then === 'function') { data = await data }
 
       if (data !== undefined) {
@@ -342,7 +342,7 @@ class Wrapper {
 
   async get (key) {
     if (this.transformer) {
-      return this.transformer.deserialize(this.storage.get(key))
+      return await this.transformer.deserialize(await this.storage.get(key))
     }
     return this.storage.get(key)
   }
