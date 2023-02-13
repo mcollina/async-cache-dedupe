@@ -288,7 +288,7 @@ class Wrapper {
     }
 
     if (!this.references) {
-      let p = this.storage.set(storageKey, result, ttl)
+      let p = this.set(storageKey, result, ttl)
       if (p && typeof p.then === 'function') {
         p = await p
       }
@@ -341,10 +341,11 @@ class Wrapper {
   }
 
   async get (key) {
-    if (this.transformer) {
-      return await this.transformer.deserialize(await this.storage.get(key))
+    const data = await this.storage.get(key)
+    if (this.transformer && !!data) {
+      return await this.transformer.deserialize(data)
     }
-    return this.storage.get(key)
+    return data
   }
 
   async set (key, value, ttl, references) {

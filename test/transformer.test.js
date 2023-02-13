@@ -16,9 +16,8 @@ teardown(async (t) => {
 })
 
 test('should handle a custom transformer to store and get data per cache', async function (t) {
-  t.plan(4)
-
   const cache = new Cache({
+    ttl: 1000,
     storage: createStorage(),
     transformer: {
       serialize: (value) => {
@@ -37,16 +36,16 @@ test('should handle a custom transformer to store and get data per cache', async
   })
 
   t.same(await cache.fetchSomething(42), { k: 42 })
+  t.same(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('should handle a custom transformer to store and get data per define', async function (t) {
-  t.plan(4)
-
   const cache = new Cache({
     storage: createStorage()
   })
 
   cache.define('fetchSomething', {
+    ttl: 1000,
     transformer: {
       serialize: (value) => {
         t.pass('serialize called')
@@ -61,5 +60,6 @@ test('should handle a custom transformer to store and get data per define', asyn
     return { k: query }
   })
 
+  t.same(await cache.fetchSomething(42), { k: 42 })
   t.same(await cache.fetchSomething(42), { k: 42 })
 })
