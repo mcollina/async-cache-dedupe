@@ -1,0 +1,59 @@
+name: browsers ci
+
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest', 'macos-latest']
+        browser: ['chrome', 'firefox', 'safari', 'edge']
+        bundler: ['browserify', 'esbuild', 'rollup', 'vite', 'webpack']
+        exclude:
+          - os: ubuntu-latest
+            browser: safari
+          - os: windows-latest
+            browser: safari
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Restore cached playwright dependency
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: | # playwright installs browsers into .local-browsers
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+            %LOCALAPPDATA%\ms-playwright
+          key: ${{ matrix.os }}-playwright-${{ hashFiles('package.json') }}
+
+      - name: Restore cached dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: node-modules-${{ matrix.os }}-${{ hashFiles('package.json') }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install browser
+        run: ./node_modules/.bin/playwright install ${{ fromJSON('{"chrome":"chromium","edge":"msedge","firefox":"firefox","safari":"webkit"}')[matrix.browser] }}
+
+      - name: Run Tests on Browsers
+        run: npm run test:browser ${{ matrix.browser }} ${{ matrix.bundler }}

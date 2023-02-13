@@ -127,11 +127,28 @@ function wildcardMatch (value, content) {
   return i >= value.length - 1
 }
 
+// `abstract-logging` dependency has been removed because there is a bug on Rollup
+// https://github.com/jsumners/abstract-logging/issues/6
+function abstractLogging () {
+  const noop = () => {}
+  return {
+    fatal: noop,
+    error: noop,
+    warn: noop,
+    info: noop,
+    debug: noop,
+    trace: noop
+  }
+}
+
+const isServerSide = typeof window === 'undefined'
+
 module.exports = {
   findNotMatching,
   findMatchingIndexes,
   bsearchIndex,
   wildcardMatch,
-
-  randomSubset
+  randomSubset,
+  abstractLogging,
+  isServerSide
 }

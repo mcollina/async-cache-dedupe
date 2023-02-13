@@ -331,6 +331,40 @@ const p1 = cache.fetchSomething(42) // <--- TypeScript doesn't argue anymore her
 
 ---
 
+## Browser
+
+All the major browser are supported; only `memory` storage type is supported, `redis` storage can't be used in a browser env.
+
+This is a very simple example of how to use this module in a browser environment:
+
+```html
+<script src="https://unpkg.com/async-cache-dedupe"></script>
+
+<script>
+  const cache = asyncCacheDedupe.createCache({
+    ttl: 5, // seconds
+    storage: { type: 'memory' },
+  })
+
+  cache.define('fetchSomething', async (k) => {
+    console.log('query', k)
+    return { k }
+  })
+
+  const p1 = cache.fetchSomething(42)
+  const p2 = cache.fetchSomething(42)
+  const p3 = cache.fetchSomething(42)
+
+  Promise.all([p1, p2, p3]).then((values) => {
+    console.log(values)
+  })
+</script>
+```
+
+You can also use the module with a bundler. The supported bundlers are `webpack`, `rollup`, `esbuild` and `browserify`.
+
+---
+
 ## Maintainers
 
 * [__Matteo Collina__](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
