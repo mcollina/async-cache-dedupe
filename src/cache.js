@@ -255,8 +255,7 @@ class Wrapper {
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
     if (this.ttl > 0 || typeof this.ttl === 'function') {
-      let data = this.get(storageKey)
-      if (data && typeof data.then === 'function') { data = await data }
+      const data = await this.get(storageKey)
 
       if (data !== undefined) {
         this.onHit(key)
@@ -288,10 +287,7 @@ class Wrapper {
     }
 
     if (!this.references) {
-      let p = this.set(storageKey, result, ttl)
-      if (p && typeof p.then === 'function') {
-        p = await p
-      }
+      await this.set(storageKey, result, ttl)
       return result
     }
 
