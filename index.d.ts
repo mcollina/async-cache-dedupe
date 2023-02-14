@@ -26,6 +26,11 @@ interface StorageMemoryOptions {
   invalidation?: boolean;
 }
 
+interface DataTransformer {
+  serialize: (data: any) => any;
+  deserialize: (data: any) => any;
+}
+
 type Events = {
   onDedupe?: (key: string) => void;
   onError?: (err: any) => void;
@@ -63,6 +68,7 @@ declare function createCache(
   options?: {
     storage?: StorageInputRedis | StorageInputMemory;
     ttl?: number;
+    transformer?: DataTransformer;
   } & Events
 ): Cache;
 
@@ -79,6 +85,7 @@ declare class Cache {
     name: string,
     opts: {
       storage?: StorageOptionsType;
+      transformer?: DataTransformer;
       ttl?: number;
       serialize?: (...args: any[]) => any;
       references?: (...args: any[]) => References | Promise<References>;
