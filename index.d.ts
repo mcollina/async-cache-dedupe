@@ -1,4 +1,4 @@
-import { Redis } from "ioredis";
+import type { Redis } from "ioredis";
 
 type StorageOptionsType = "redis" | "memory";
 
@@ -59,14 +59,18 @@ declare class StorageInterface {
   refresh(): Promise<void>;
 }
 
-declare function createCache(
+declare interface ICachedFunctions {
+  [key: string]: (...args: any[]) => any
+}
+
+declare function createCache<CachedFunctions extends ICachedFunctions = ICachedFunctions>(
   options?: {
     storage?: StorageInputRedis | StorageInputMemory;
     ttl?: number;
   } & Events
-): Cache;
+): Cache<CachedFunctions> & CachedFunctions;
 
-declare class Cache {
+declare class Cache<CachedFunctions extends ICachedFunctions = ICachedFunctions> {
   constructor(
     options: {
       ttl: number;
@@ -74,20 +78,19 @@ declare class Cache {
     } & Events
   );
 
-
-  define(
-    name: string,
+  define<Name extends keyof CachedFunctions>(
+    name: Name,
     opts: {
       storage?: StorageOptionsType;
       ttl?: number;
       serialize?: (...args: any[]) => any;
       references?: (...args: any[]) => References | Promise<References>;
     } & Events,
-    func?: (...args: any[]) => any
+    func?: CachedFunctions[Name]
   ): void;
-  define(
-    name: string,
-    opts: (...args: any[]) => any,
+  define<Name extends keyof CachedFunctions>(
+    name: Name,
+    opts: CachedFunctions[Name],
   ): void;
 
   clear(): Promise<void>;

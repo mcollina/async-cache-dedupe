@@ -299,10 +299,15 @@ export type CachedFunctions = {
   fetchSomething: typeof fetchSomething;
 }; // <--- This is where you define all the functions you want to cache
 
-const cache = createCache({
+// This is where you tell the compiler to consider both the Cache type and your custom type
+//                         |
+//                         |
+//                         |
+//                         ↓
+const cache = createCache<CachedFunctions>({
   ttl: 5, // seconds
   storage: { type: 'memory' },
-}) as Cache & CachedFunctions // <--- This is where you tell the compiler to consider both the Cache type and your custom type
+})
 
 cache.define('fetchSomething', fetchSomething)
 

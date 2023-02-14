@@ -25,7 +25,7 @@ expectType<Cache>(memoryCache);
 
 // Testing Union Types
 
-const fetchSomething = async (k: any) => {
+const fetchSomething = async (k: any): Promise<{ k: any }> => {
   console.log("query", k);
   return { k };
 };
@@ -34,13 +34,14 @@ export type CachedFunctions = {
   fetchSomething: typeof fetchSomething;
 };
 
-const unionMemoryCache = createCache({
+const unionMemoryCache = createCache<CachedFunctions>({
   storage: {
     type: "memory",
     options: storageOptions,
   },
-}) as Cache & CachedFunctions;
-expectType<Cache & CachedFunctions>(unionMemoryCache);
+});
+
+expectType<Cache<CachedFunctions> & CachedFunctions>(unionMemoryCache);
 
 unionMemoryCache.define("fetchSomething", fetchSomething);
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
