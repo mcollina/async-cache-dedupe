@@ -23,6 +23,12 @@ const memoryCache = createCache({
 });
 expectType<Cache>(memoryCache);
 
+const cacheWithTtlAndStale = createCache({
+  ttl: 1000,
+  stale: 1000,
+});
+expectType<Cache>(cacheWithTtlAndStale);
+
 // Testing Union Types
 
 const fetchSomething = async (k: any) => {
@@ -32,6 +38,7 @@ const fetchSomething = async (k: any) => {
 
 export type CachedFunctions = {
   fetchSomething: typeof fetchSomething;
+  fetchSomethingElse: typeof fetchSomething;
 };
 
 const unionMemoryCache = createCache({
@@ -44,6 +51,9 @@ expectType<Cache & CachedFunctions>(unionMemoryCache);
 
 unionMemoryCache.define("fetchSomething", fetchSomething);
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
+
+unionMemoryCache.define("fetchSomethingElse", { ttl: 1000, stale: 1000}, fetchSomething);
+expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElse);
 
 const result = await unionMemoryCache.fetchSomething("test");
 expectType<{ k: any }>(result);

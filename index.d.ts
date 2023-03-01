@@ -69,6 +69,7 @@ declare function createCache(
     storage?: StorageInputRedis | StorageInputMemory;
     ttl?: number;
     transformer?: DataTransformer;
+    stale?: number;
   } & Events
 ): Cache;
 
@@ -87,6 +88,7 @@ declare class Cache {
       storage?: StorageOptionsType;
       transformer?: DataTransformer;
       ttl?: number;
+      stale?: number;
       serialize?: (...args: any[]) => any;
       references?: (...args: any[]) => References | Promise<References>;
     } & Events,
