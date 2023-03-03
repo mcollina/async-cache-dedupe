@@ -1,6 +1,6 @@
 'use strict'
 
-const { kValues, kStorage, kStorages, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale } = require('./symbol')
+const { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale } = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const createStorage = require('./storage')
 
@@ -8,6 +8,7 @@ class Cache {
   /**
    * @param {!Object} opts
    * @param {!Storage} opts.storage - the storage to use
+   * @param {?Object} opts.transformer - the transformer to use
    * @param {?number} [opts.ttl=0] - in seconds; default is 0 seconds, so it only does dedupe without cache
    * @param {?function} opts.onDedupe
    * @param {?function} opts.onError
@@ -51,6 +52,8 @@ class Cache {
     this[kStorages] = new Map()
     this[kStorages].set('_default', options.storage)
 
+    this[kTransfromer] = options.transformer
+
     this[kTTL] = options.ttl || 0
     this[kOnDedupe] = options.onDedupe || noop
     this[kOnError] = options.onError || noop
@@ -64,6 +67,7 @@ class Cache {
    * @param {!string} name name of the function
    * @param {?Object} [opts]
    * @param {?Object} [opts.storage] storage to use; default is the main one
+   * @param {?Object} opts.transformer - the transformer to use
    * @param {?number} [opts.ttl] ttl for the results; default ttl is the one passed to the constructor
    * @param {?function} [opts.onDedupe] function to call on dedupe; default is the one passed to the constructor
    * @param {?function} [opts.onError] function to call on error; default is the one passed to the constructor
@@ -119,8 +123,9 @@ class Cache {
     const onError = opts.onError || this[kOnError]
     const onHit = opts.onHit || this[kOnHit]
     const onMiss = opts.onMiss || this[kOnMiss]
+    const transformer = opts.transformer || this[kTransfromer]
 
-    const wrapper = new Wrapper(func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss, stale)
+    const wrapper = new Wrapper(func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale)
 
     this[kValues][name] = wrapper
     this[name] = wrapper.add.bind(wrapper)
@@ -187,6 +192,7 @@ class Wrapper {
    * @param {function} serialize
    * @param {function} references
    * @param {Storage} storage
+   * @param {Object} transformer
    * @param {number} ttl
    * @param {function} onDedupe
    * @param {function} onError
@@ -194,7 +200,7 @@ class Wrapper {
    * @param {function} onMiss
    * @param {stale} ttl
    */
-  constructor (func, name, serialize, references, storage, ttl, onDedupe, onError, onHit, onMiss, stale) {
+  constructor (func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale) {
     this.dedupes = new Map()
     this.func = func
     this.name = name
@@ -202,6 +208,7 @@ class Wrapper {
     this.references = references
 
     this.storage = storage
+    this.transformer = transformer
     this.ttl = ttl
     this.onDedupe = onDedupe
     this.onError = onError
@@ -248,8 +255,7 @@ class Wrapper {
   async wrapFunction (args, key) {
     const storageKey = this.getStorageKey(key)
     if (this.ttl > 0 || typeof this.ttl === 'function') {
-      let data = this.storage.get(storageKey)
-      if (data && typeof data.then === 'function') { data = await data }
+      const data = await this.get(storageKey)
 
       if (data !== undefined) {
         this.onHit(key)
@@ -281,10 +287,7 @@ class Wrapper {
     }
 
     if (!this.references) {
-      let p = this.storage.set(storageKey, result, ttl)
-      if (p && typeof p.then === 'function') {
-        p = await p
-      }
+      await this.set(storageKey, result, ttl)
       return result
     }
 
@@ -334,10 +337,17 @@ class Wrapper {
   }
 
   async get (key) {
-    return this.storage.get(key)
+    const data = await this.storage.get(key)
+    if (this.transformer && !!data) {
+      return await this.transformer.deserialize(data)
+    }
+    return data
   }
 
   async set (key, value, ttl, references) {
+    if (this.transformer) {
+      value = this.transformer.serialize(value)
+    }
     return this.storage.set(key, value, ttl, references)
   }
 
