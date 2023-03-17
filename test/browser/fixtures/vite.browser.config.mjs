@@ -16,9 +16,6 @@ export default defineConfig({
       formats: ['iife']
     },
     rollupOptions: {
-      output: {
-        intro: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 0) }'
-      },
       external: ['./src/storage/redis.js']
     },
     emptyOutDir: false,
