@@ -1,9 +1,12 @@
 'use strict'
 
 const LRUCache = require('mnemonist/lru-cache')
-const { abstractLogging } = require('../util')
+const { abstractLogging, isServerSide } = require('../util')
 const StorageInterface = require('./interface')
 const { findMatchingIndexes, findNotMatching, bsearchIndex, wildcardMatch } = require('../util')
+
+// istanbul ignore next
+const setImmediate = isServerSide ? globalThis.setImmediate : (fn, ...args) => setTimeout(fn, 0, ...args)
 
 const DEFAULT_CACHE_SIZE = 1024
 

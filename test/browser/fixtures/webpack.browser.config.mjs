@@ -17,10 +17,6 @@ export default {
   target: 'web',
   performance: false,
   plugins: [
-    new webpack.BannerPlugin({
-      banner: 'function setImmediate(fn, ...args) { setTimeout(() => fn(...args), 0) }',
-      raw: true
-    }),
     new webpack.ProvidePlugin({
       process: require.resolve('process')
     })
