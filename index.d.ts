@@ -82,17 +82,17 @@ declare class Cache {
   );
 
 
-  define(
+  define<T extends (...args: any[]) => any>(
     name: string,
     opts: {
       storage?: StorageOptionsType;
       transformer?: DataTransformer;
-      ttl?: number;
+      ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
       stale?: number;
       serialize?: (...args: any[]) => any;
       references?: (...args: any[]) => References | Promise<References>;
     } & Events,
-    func?: (...args: any[]) => any
+    func?: T
   ): void;
   define(
     name: string,
