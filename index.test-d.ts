@@ -39,6 +39,7 @@ const fetchSomething = async (k: any) => {
 export type CachedFunctions = {
   fetchSomething: typeof fetchSomething;
   fetchSomethingElse: typeof fetchSomething;
+  fetchSomethingElseWithTtlFunction: typeof fetchSomething;
 };
 
 const unionMemoryCache = createCache({
@@ -54,6 +55,10 @@ expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
 
 unionMemoryCache.define("fetchSomethingElse", { ttl: 1000, stale: 1000}, fetchSomething);
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElse);
+
+unionMemoryCache.define("fetchSomethingElseWithTtlFunction", { ttl: (result) => result.k ? 1000 : 5, stale: 1000}, fetchSomething);
+expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElseWithTtlFunction);
+
 
 const result = await unionMemoryCache.fetchSomething("test");
 expectType<{ k: any }>(result);
