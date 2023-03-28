@@ -53,7 +53,7 @@
     "tap-mocha-reporter": "^5.0.3",
     "tap-parser": "^12.0.1",
     "tape": "^5.6.3",
-    "tsd": "^0.26.1",
+    "tsd": "^0.28.1",
     "vite": "^4.0.4",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"
