@@ -308,7 +308,7 @@ As the library does some meta-programming and magic stuff behind the scenes, you
 To avoid this, our suggestion is to use a [`Union Type`](https://www.typescriptlang.org/docs/handbook/unions-and-intersections.html) in combination with the given `Cache` type as below:
 
 ```ts
-import { createCache } from 'async-cache-dedupe'
+import { createCache, Cache } from 'async-cache-dedupe'
 
 const fetchSomething = async (k: any) => {
   console.log("query", k);
