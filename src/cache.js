@@ -293,9 +293,13 @@ class Wrapper {
 
     try {
       let references = this.references(args, key, result)
+      let value = result
       if (references && typeof references.then === 'function') { references = await references }
+      if (this.transformer) {
+        value = this.transformer.serialize(result)
+      }
       // TODO validate references?
-      await this.storage.set(storageKey, result, ttl, references)
+      await this.storage.set(storageKey, value, ttl, references)
     } catch (err) {
       this.onError(err)
     }
