@@ -100,6 +100,7 @@ declare class Cache {
   ): void;
 
   clear(): Promise<void>;
+  clear(name: string): Promise<void>;
   clear(name: string, value: any): Promise<void>;
 
   get(name: string, key: string): Promise<any>;
