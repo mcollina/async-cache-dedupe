@@ -53,7 +53,11 @@ expectType<Cache & CachedFunctions>(unionMemoryCache);
 unionMemoryCache.define("fetchSomething", fetchSomething);
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
 
-unionMemoryCache.define("fetchSomethingElse", { ttl: 1000, stale: 1000 }, fetchSomething);
+unionMemoryCache.define(
+	"fetchSomethingElse",
+	{ ttl: 1000, stale: 1000, references: (args, key, result) => result.k },
+	fetchSomething,
+);
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElse);
 
 unionMemoryCache.define(
