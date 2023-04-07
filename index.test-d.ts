@@ -67,6 +67,10 @@ unionMemoryCache.define(
 );
 expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElseWithTtlFunction);
 
+expectType<Promise<void>>(cache.clear());
+expectType<Promise<void>>(cache.clear("fetchSomething"));
+expectType<Promise<void>>(cache.clear("fetchSomething", "bar"));
+
 const result = await unionMemoryCache.fetchSomething("test");
 expectType<{ k: any }>(result);
 

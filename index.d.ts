@@ -69,41 +69,46 @@ declare function createCache(
 ): Cache;
 
 declare class Cache {
-	constructor(
-		options: {
-			ttl: number;
-			storage: StorageOptionsType;
-		} & Events,
-	);
+  constructor(
+    options: {
+      ttl: number;
+      storage: StorageOptionsType;
+    } & Events
+  );
 
-	define<T extends (...args: any[]) => any>(
-		name: string,
-		opts: {
-			storage?: StorageOptionsType;
-			transformer?: DataTransformer;
-			ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
-			stale?: number;
-			serialize?: (...args: any[]) => any;
-			references?: (
+
+  define<T extends (...args: any[]) => any>(
+    name: string,
+    opts: {
+      storage?: StorageOptionsType;
+      transformer?: DataTransformer;
+      ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
+      stale?: number;
+      serialize?: (...args: any[]) => any;
+      references?: (
 				args: Parameters<T>,
 				key: string,
 				result: Awaited<ReturnType<T>>,
 			) => References | Promise<References>;
-		} & Events,
-		func?: T,
-	): void;
-	define(name: string, opts: (...args: any[]) => any): void;
+    } & Events,
+    func?: T
+  ): void;
+  define(
+    name: string,
+    opts: (...args: any[]) => any,
+  ): void;
 
-	clear(): Promise<void>;
-	clear(name: string, value: any): Promise<void>;
+  clear(): Promise<void>;
+  clear(name: string): Promise<void>;
+  clear(name: string, value: any): Promise<void>;
 
-	get(name: string, key: string): Promise<any>;
+  get(name: string, key: string): Promise<any>;
 
-	set(name: string, key: string, value: any, ttl: number, references?: References): Promise<void>;
+  set(name: string, key: string, value: any, ttl: number, references?: References): Promise<void>;
 
-	invalidate(name: string, references: References): Promise<void>;
+  invalidate(name: string, references: References): Promise<void>;
 
-	invalidateAll(references: References, storage?: StorageOptionsType): Promise<void>;
+  invalidateAll(references: References, storage?: StorageOptionsType): Promise<void>;
 }
 
 declare function createStorage(type: "redis", options: StorageRedisOptions): StorageInterface;
