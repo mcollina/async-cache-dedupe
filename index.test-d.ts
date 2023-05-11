@@ -6,7 +6,7 @@ import { StorageInterface, StorageMemoryOptions } from "./index.js";
 // Testing internal types
 
 const storageOptions: StorageMemoryOptions = {
-  size: 1000,
+	size: 1000,
 };
 
 const cache = createCache();
@@ -16,24 +16,30 @@ const storage = createStorage("memory", storageOptions);
 expectType<StorageInterface>(storage);
 
 const memoryCache = createCache({
-  storage: {
-    type: "memory",
-    options: storageOptions,
-  },
+	storage: {
+		type: "memory",
+		options: storageOptions,
+	},
 });
 expectType<Cache>(memoryCache);
 
 const cacheWithTtlAndStale = createCache({
-  ttl: 1000,
-  stale: 1000,
+	ttl: 1000,
+	stale: 1000,
 });
 expectType<Cache>(cacheWithTtlAndStale);
 
 // Testing Union Types
 
 const fetchSomething = async (k: any) => {
-  console.log("query", k);
-  return { k };
+	console.log("query", k);
+	return { k };
+};
+
+export type CachedFunctions = {
+	fetchSomething: typeof fetchSomething;
+	fetchSomethingElse: typeof fetchSomething;
+	fetchSomethingElseWithTtlFunction: typeof fetchSomething;
 };
 
 const unionMemoryCache = createCache({
@@ -43,7 +49,7 @@ const unionMemoryCache = createCache({
   },
 });
 expectType<Cache>(unionMemoryCache);
-let currentCacheInstance = unionMemoryCache
+const currentCacheInstance = unionMemoryCache
   .define("fetchSomething", fetchSomething)
   .define(
     "fetchSomethingElse",
@@ -66,6 +72,7 @@ expectType<Promise<void>>(cache.clear("fetchSomething"));
 expectType<Promise<void>>(cache.clear("fetchSomething", "bar"));
 
 const result = await currentCacheInstance.fetchSomething("test");
+
 expectType<{ k: any }>(result);
 
 await unionMemoryCache.invalidateAll("test:*");
