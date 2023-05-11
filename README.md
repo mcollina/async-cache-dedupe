@@ -12,28 +12,28 @@ npm i async-cache-dedupe
 ## Example
 
 ```js
-import { createCache } from 'async-cache-dedupe'
+import { createCache } from "async-cache-dedupe";
 
 const cache = createCache({
   ttl: 5, // seconds
-  storage: { type: 'memory' },
-})
+  storage: { type: "memory" },
+});
 
-cache.define('fetchSomething', async (k) => {
-  console.log('query', k)
+cache.define("fetchSomething", async (k) => {
+  console.log("query", k);
   // query 42
   // query 24
 
-  return { k }
-})
+  return { k };
+});
 
-const p1 = cache.fetchSomething(42)
-const p2 = cache.fetchSomething(24)
-const p3 = cache.fetchSomething(42)
+const p1 = cache.fetchSomething(42);
+const p2 = cache.fetchSomething(24);
+const p3 = cache.fetchSomething(42);
 
-const res = await Promise.all([p1, p2, p3])
+const res = await Promise.all([p1, p2, p3]);
 
-console.log(res)
+console.log(res);
 // [
 //   { k: 42 },
 //   { k: 24 }
@@ -51,56 +51,67 @@ Creates a new cache.
 
 Options:
 
-* `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as the promise resolves.
-* `stale`: the time after which the value is served from the cache after the ttl has expired.
-* `onDedupe`: a function that is called every time it is defined is deduped.
-* `onError`: a function that is called every time there is a cache error.
-* `onHit`: a function that is called every time there is a hit in the cache.
-* `onMiss`: a function that is called every time the result is not in the cache.
-* `storage`: the storage options; default is `{ type: "memory" }`
+- `ttl`: the maximum time a cache entry can live, default `0`; if `0`, an element is removed from the cache as soon as the promise resolves.
+- `stale`: the time after which the value is served from the cache after the ttl has expired.
+- `onDedupe`: a function that is called every time it is defined is deduped.
+- `onError`: a function that is called every time there is a cache error.
+- `onHit`: a function that is called every time there is a hit in the cache.
+- `onMiss`: a function that is called every time the result is not in the cache.
+- `storage`: the storage options; default is `{ type: "memory" }`
   Storage options are:
-  * `type`: `memory` (default) or `redis`
-  * `options`: by storage type
-    * for `memory` type
-      * `size`: maximum number of items to store in the cache _per resolver_. Default is `1024`.
-      * `invalidation`: enable invalidation, see [invalidation](#invalidation). Default is disabled.
-      * `log`: logger instance `pino` compatible, default is disabled.
 
-      Example  
+  - `type`: `memory` (default) or `redis`
+  - `options`: by storage type
 
-      ```js
-      createCache({ storage: { type: 'memory', options: { size: 2048 } } })
-      ```
+    - for `memory` type
 
-    * for `redis` type
-      * `client`: a redis client instance, mandatory. Should be an `ioredis` client or compatible.
-      * `invalidation`: enable invalidation, see [invalidation](#invalidation). Default is disabled.
-      * `invalidation.referencesTTL`: references TTL in seconds, it means how long the references are alive; it should be set at the maximum of all the caches ttl.
-      * `log`: logger instance `pino` compatible, default is disabled.
+      - `size`: maximum number of items to store in the cache _per resolver_. Default is `1024`.
+      - `invalidation`: enable invalidation, see [invalidation](#invalidation). Default is disabled.
+      - `log`: logger instance `pino` compatible, default is disabled.
 
       Example
 
       ```js
-      createCache({ storage: { type: 'redis', options: { client: new Redis(), invalidation: { referencesTTL: 60 } } } })
+      createCache({ storage: { type: "memory", options: { size: 2048 } } });
       ```
-* `transformer`: the transformer to used to serialize and deserialize the cache entries. 
-  It must be an object with the following methods:
-  * `serialize`: a function that receives the result of the original function and returns a serializable object.
-  * `deserialize`: a function that receives the serialized object and returns the original result.
 
-  * Default is `undefined`, so the default transformer is used.
+    - for `redis` type
+
+      - `client`: a redis client instance, mandatory. Should be an `ioredis` client or compatible.
+      - `invalidation`: enable invalidation, see [invalidation](#invalidation). Default is disabled.
+      - `invalidation.referencesTTL`: references TTL in seconds, it means how long the references are alive; it should be set at the maximum of all the caches ttl.
+      - `log`: logger instance `pino` compatible, default is disabled.
+
+      Example
+
+      ```js
+      createCache({
+        storage: {
+          type: "redis",
+          options: { client: new Redis(), invalidation: { referencesTTL: 60 } },
+        },
+      });
+      ```
+
+- `transformer`: the transformer to used to serialize and deserialize the cache entries.
+  It must be an object with the following methods:
+
+  - `serialize`: a function that receives the result of the original function and returns a serializable object.
+  - `deserialize`: a function that receives the serialized object and returns the original result.
+
+  - Default is `undefined`, so the default transformer is used.
 
     Example
 
     ```js
-    import superjson from 'superjson';
+    import superjson from "superjson";
 
     const cache = createCache({
       transformer: {
         serialize: (result) => superjson.serialize(result),
         deserialize: (serialized) => superjson.deserialize(serialized),
-      }
-    })
+      },
+    });
     ```
 
 ### `cache.define(name[, opts], original(arg, cacheKey))`
@@ -112,47 +123,54 @@ in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`
 
 Options:
 
-* `ttl`: a number or a function that returns a number of the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped. The first argument of the function is the result of the original function.
-* `stale`: the time after which the value is served from the cache after the ttl has expired.
-* `serialize`: a function to convert the given argument into a serializable object (or string).
-* `onDedupe`: a function that is called every time there is defined is deduped.
-* `onError`: a function that is called every time there is a cache error.
-* `onHit`: a function that is called every time there is a hit in the cache.
-* `onMiss`: a function that is called every time the result is not in the cache.
-* `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
-* `transformer`: the transformer to used to serialize and deserialize the cache entries. It's possible to specify different transformers for each defined function for fine-tuning.
-* `references`: sync or async function to generate references, it receives `(args, key, result)` from the defined function call and must return an array of strings or falsy; see [invalidation](#invalidation) to know how to use them.
+- `ttl`: a number or a function that returns a number of the maximum time a cache entry can live, default as defined in the cache; default is zero, so cache is disabled, the function will be only the deduped. The first argument of the function is the result of the original function.
+- `stale`: the time after which the value is served from the cache after the ttl has expired.
+- `serialize`: a function to convert the given argument into a serializable object (or string).
+- `onDedupe`: a function that is called every time there is defined is deduped.
+- `onError`: a function that is called every time there is a cache error.
+- `onHit`: a function that is called every time there is a hit in the cache.
+- `onMiss`: a function that is called every time the result is not in the cache.
+- `storage`: the storage to use, same as above. It's possible to specify different storages for each defined function for fine-tuning.
+- `transformer`: the transformer to used to serialize and deserialize the cache entries. It's possible to specify different transformers for each defined function for fine-tuning.
+- `references`: sync or async function to generate references, it receives `(args, key, result)` from the defined function call and must return an array of strings or falsy; see [invalidation](#invalidation) to know how to use them.
 
   Example 1
 
   ```js
-    const cache = createCache({ ttl: 60 })
+  const cache = createCache({ ttl: 60 });
 
-    cache.define('fetchUser', {
-      references: (args, key, result) => result ? [`user~${result.id}`] : null
-    }, 
-    (id) => database.find({ table: 'users', where: { id }}))
+  cache.define(
+    "fetchUser",
+    {
+      references: (args, key, result) =>
+        result ? [`user~${result.id}`] : null,
+    },
+    (id) => database.find({ table: "users", where: { id } })
+  );
 
-    await cache.fetchUser(1)
+  await cache.fetchUser(1);
   ```
 
   Example 2 - dynamically set `ttl` based on result.
-  
+
   ```js
-  const cache = createCache()
+  const cache = createCache();
 
-  cache.define('fetchAccessToken', {
-    ttl: (result) => result.expiresInSeconds
-  }, async () => {
-    
-    const response = await fetch("https://example.com/token");
-    const result = await response.json();
-    // => { "token": "abc", "expiresInSeconds": 60 }
-    
-    return result;
-  })
+  cache.define(
+    "fetchAccessToken",
+    {
+      ttl: (result) => result.expiresInSeconds,
+    },
+    async () => {
+      const response = await fetch("https://example.com/token");
+      const result = await response.json();
+      // => { "token": "abc", "expiresInSeconds": 60 }
 
-  await cache.fetchAccessToken()
+      return result;
+    }
+  );
+
+  await cache.fetchAccessToken();
   ```
 
 ### `cache.clear([name], [arg])`
@@ -166,37 +184,45 @@ If `arg` is specified, only the elements cached with the given `name` and `arg` 
 
 `references` can be:
 
-* a single reference
-* an array of references (without wildcard)
-* a matching reference with wildcard, same logic for `memory` and `redis`
+- a single reference
+- an array of references (without wildcard)
+- a matching reference with wildcard, same logic for `memory` and `redis`
 
 Example
 
 ```js
-const cache = createCache({ ttl: 60 })
+const cache = createCache({ ttl: 60 });
 
-cache.define('fetchUser', {
-  references: (args, key, result) => result ? [`user:${result.id}`] : null
-}, (id) => database.find({ table: 'users', where: { id }}))
+cache.define(
+  "fetchUser",
+  {
+    references: (args, key, result) => (result ? [`user:${result.id}`] : null),
+  },
+  (id) => database.find({ table: "users", where: { id } })
+);
 
-cache.define('fetchCountries', {
-  storage: { type: 'memory', size: 256 },
-  references: (args, key, result) => [`countries`]
-}, (id) => database.find({ table: 'countries' }))
+cache.define(
+  "fetchCountries",
+  {
+    storage: { type: "memory", size: 256 },
+    references: (args, key, result) => [`countries`],
+  },
+  (id) => database.find({ table: "countries" })
+);
 
 // ...
 
 // invalidate all users from default storage
-cache.invalidateAll('user:*')
+cache.invalidateAll("user:*");
 
 // invalidate user 1 from default storage
-cache.invalidateAll('user:1')
+cache.invalidateAll("user:1");
 
 // invalidate user 1 and user 2 from default storage
-cache.invalidateAll(['user:1', 'user:2'])
+cache.invalidateAll(["user:1", "user:2"]);
 
 // note "fetchCountries" uses a different storage
-cache.invalidateAll('countries', 'fetchCountries')
+cache.invalidateAll("countries", "fetchCountries");
 ```
 
 See below how invalidation and references work.
@@ -207,8 +233,8 @@ Along with `time to live` invalidation of the cache entries, we can use invalida
 The concept behind invalidation by keys is that entries have an auxiliary key set that explicitly links requests along with their own result. These auxiliary keys are called here `references`.  
 A scenario. Let's say we have an entry _user_ `{id: 1, name: "Alice"}`, it may change often or rarely, the `ttl` system is not accurate:
 
-* it can be updated before `ttl` expiration, in this case the old value is shown until expiration by `ttl`.  
-* it's not been updated during `ttl` expiration, so in this case, we don't need to reload the value, because it's not changed
+- it can be updated before `ttl` expiration, in this case the old value is shown until expiration by `ttl`.
+- it's not been updated during `ttl` expiration, so in this case, we don't need to reload the value, because it's not changed
 
 To solve this common problem, we can use `references`.  
 We can say that the result of defined function `getUser(id: 1)` has reference `user~1`, and the result of defined function `findUsers`, containing `{id: 1, name: "Alice"},{id: 2, name: "Bob"}` has references `[user~1,user~2]`.
@@ -230,11 +256,11 @@ Storage `memory` doesn't have `gc`.
 
 ### Redis garbage collector
 
-As said, While the garbage collector is optional, is highly recommended to keep references up to date and improve performances on setting cache entries and invalidation of them.  
+As said, While the garbage collector is optional, is highly recommended to keep references up to date and improve performances on setting cache entries and invalidation of them.
 
 ### `storage.gc([mode], [options])`
 
-* `mode`: `lazy` (default) or `strict`.
+- `mode`: `lazy` (default) or `strict`.
   In `lazy` mode, only a chunk of the `references` are randomly checked, and probably freed; running `lazy` jobs tend to eventually clear all the expired `references`.
   In `strict` mode, all the `references` are checked and freed, and after that, `references` and entries are perfectly clean.
   `lazy` mode is the light heuristic way to ensure cached entries and `references` are cleared without stressing too much `redis`, `strict` mode at the opposite stress more `redis` to get a perfect result.
@@ -242,9 +268,9 @@ As said, While the garbage collector is optional, is highly recommended to keep 
 
 Options:
 
-* `chunk`: the chunk size of references analyzed per loops, default `64`
-* `lazy~chunk`: the chunk size of references analyzed per loops in `lazy` mode, default `64`; if both `chunk` and `lazy.chunk` is set, the maximum one is taken
-* `lazy~cursor`: the cursor offset, default zero; cursor should be set at `report.cursor` to continue scanning from the previous operation
+- `chunk`: the chunk size of references analyzed per loops, default `64`
+- `lazy~chunk`: the chunk size of references analyzed per loops in `lazy` mode, default `64`; if both `chunk` and `lazy.chunk` is set, the maximum one is taken
+- `lazy~cursor`: the cursor offset, default zero; cursor should be set at `report.cursor` to continue scanning from the previous operation
 
 Return `report` of the `gc` job, as follows
 
@@ -305,28 +331,27 @@ setInterval(() => {
 
 This module provides a basic type definition for TypeScript.  
 As the library does some meta-programming and magic stuff behind the scenes, your compiler could yell at you when defining functions using the `define` property.  
-To avoid this, our suggestion is to use a [`Union Type`](https://www.typescriptlang.org/docs/handbook/unions-and-intersections.html) in combination with the given `Cache` type as below:
+To avoid this, chain all defined functions in a single invocation:
 
 ```ts
-import { createCache, Cache } from 'async-cache-dedupe'
+import { createCache, Cache } from "async-cache-dedupe";
 
 const fetchSomething = async (k: any) => {
   console.log("query", k);
   return { k };
 };
 
-export type CachedFunctions = {
-  fetchSomething: typeof fetchSomething;
-}; // <--- This is where you define all the functions you want to cache
-
 const cache = createCache({
   ttl: 5, // seconds
-  storage: { type: 'memory' },
-}) as Cache & CachedFunctions // <--- This is where you tell the compiler to consider both the Cache type and your custom type
+  storage: { type: "memory" },
+});
 
-cache.define('fetchSomething', fetchSomething)
+const cacheInstance = cache
+  .define("fetchSomething", fetchSomething)
+  .define("fetchSomethingElse", fetchSomething);
 
-const p1 = cache.fetchSomething(42) // <--- TypeScript doesn't argue anymore here!
+const p1 = cacheInstance.fetchSomething(42); // <--- TypeScript doesn't argue anymore here!
+const p2 = cacheInstance.fetchSomethingElse(42); // <--- TypeScript doesn't argue anymore here!
 ```
 
 ---
@@ -343,21 +368,21 @@ This is a very simple example of how to use this module in a browser environment
 <script>
   const cache = asyncCacheDedupe.createCache({
     ttl: 5, // seconds
-    storage: { type: 'memory' },
-  })
+    storage: { type: "memory" },
+  });
 
-  cache.define('fetchSomething', async (k) => {
-    console.log('query', k)
-    return { k }
-  })
+  cache.define("fetchSomething", async (k) => {
+    console.log("query", k);
+    return { k };
+  });
 
-  const p1 = cache.fetchSomething(42)
-  const p2 = cache.fetchSomething(42)
-  const p3 = cache.fetchSomething(42)
+  const p1 = cache.fetchSomething(42);
+  const p2 = cache.fetchSomething(42);
+  const p3 = cache.fetchSomething(42);
 
   Promise.all([p1, p2, p3]).then((values) => {
-    console.log(values)
-  })
+    console.log(values);
+  });
 </script>
 ```
 
@@ -367,15 +392,15 @@ You can also use the module with a bundler. The supported bundlers are `webpack`
 
 ## Maintainers
 
-* [__Matteo Collina__](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
-* [__Simone Sanfratello__](https://github.com/simone-sanfratello), <https://twitter.com/simonesanfradev>, <https://www.npmjs.com/~simone.sanfra>
+- [**Matteo Collina**](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
+- [**Simone Sanfratello**](https://github.com/simone-sanfratello), <https://twitter.com/simonesanfradev>, <https://www.npmjs.com/~simone.sanfra>
 
 ---
 
 ## Breaking Changes
 
-* version `0.5.0` -> `0.6.0`
-  * `options.cacheSize` is dropped in favor of `storage`
+- version `0.5.0` -> `0.6.0`
+  - `options.cacheSize` is dropped in favor of `storage`
 
 ## License
 

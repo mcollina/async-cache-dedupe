@@ -129,6 +129,7 @@ class Cache {
 
     this[kValues][name] = wrapper
     this[name] = wrapper.add.bind(wrapper)
+    return this
   }
 
   async clear (name, value) {
