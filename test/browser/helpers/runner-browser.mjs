@@ -7,7 +7,7 @@ import { Readable } from 'node:stream'
 import { copyFile, mkdir, rm } from 'node:fs/promises'
 import { exec } from 'node:child_process'
 import { info, error, highlightFile, createDeferredPromise } from './util.js'
-import Parser from 'tap-parser'
+import { Parser } from 'tap-parser'
 import Reporter from 'tap-mocha-reporter'
 
 async function runCommand (command) {
