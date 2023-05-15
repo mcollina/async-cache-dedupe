@@ -76,9 +76,8 @@ declare class Cache {
     } & Events
   );
 
-
-  define<T extends (...args: any[]) => any>(
-    name: string,
+  define<T extends (...args: any[]) => any, N extends string, S extends this>(
+    name: N,
     opts: {
       storage?: StorageOptionsType;
       transformer?: DataTransformer;
@@ -86,17 +85,17 @@ declare class Cache {
       stale?: number;
       serialize?: (...args: any[]) => any;
       references?: (
-				args: Parameters<T>,
-				key: string,
-				result: Awaited<ReturnType<T>>,
-			) => References | Promise<References>;
+        args: Parameters<T>,
+        key: string,
+        result: Awaited<ReturnType<T>>
+      ) => References | Promise<References>;
     } & Events,
     func?: T
-  ): void;
-  define(
-    name: string,
-    opts: (...args: any[]) => any,
-  ): void;
+  ): S & { [n in N]: T };
+  define<T extends (...args: any[]) => any, N extends string, S extends this>(
+    name: N,
+    opts: T
+  ): S & { [n in N]: T };
 
   clear(): Promise<void>;
   clear(name: string): Promise<void>;
@@ -104,11 +103,20 @@ declare class Cache {
 
   get(name: string, key: string): Promise<any>;
 
-  set(name: string, key: string, value: any, ttl: number, references?: References): Promise<void>;
+  set(
+    name: string,
+    key: string,
+    value: any,
+    ttl: number,
+    references?: References
+  ): Promise<void>;
 
   invalidate(name: string, references: References): Promise<void>;
 
-  invalidateAll(references: References, storage?: StorageOptionsType): Promise<void>;
+  invalidateAll(
+    references: References,
+    storage?: StorageOptionsType
+  ): Promise<void>;
 }
 
 declare function createStorage(type: "redis", options: StorageRedisOptions): StorageInterface;

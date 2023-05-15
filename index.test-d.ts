@@ -43,35 +43,36 @@ export type CachedFunctions = {
 };
 
 const unionMemoryCache = createCache({
-	storage: {
-		type: "memory",
-		options: storageOptions,
-	},
-}) as Cache & CachedFunctions;
-expectType<Cache & CachedFunctions>(unionMemoryCache);
-
-unionMemoryCache.define("fetchSomething", fetchSomething);
-expectType<typeof fetchSomething>(unionMemoryCache.fetchSomething);
-
-unionMemoryCache.define(
-	"fetchSomethingElse",
-	{ ttl: 1000, stale: 1000, references: (args, key, result) => result.k },
-	fetchSomething,
+  storage: {
+    type: "memory",
+    options: storageOptions,
+  },
+});
+expectType<Cache>(unionMemoryCache);
+const currentCacheInstance = unionMemoryCache
+  .define("fetchSomething", fetchSomething)
+  .define(
+    "fetchSomethingElse",
+    { ttl: 1000, stale: 1000, references: (args, key, result) => result.k },
+    fetchSomething
+  )
+  .define(
+    "fetchSomethingElseWithTtlFunction",
+    { ttl: (result) => (result.k ? 1000 : 5), stale: 1000 },
+    fetchSomething
+  );
+expectType<typeof fetchSomething>(currentCacheInstance.fetchSomething);
+expectType<typeof fetchSomething>(currentCacheInstance.fetchSomethingElse);
+expectType<typeof fetchSomething>(
+  currentCacheInstance.fetchSomethingElseWithTtlFunction
 );
-expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElse);
-
-unionMemoryCache.define(
-	"fetchSomethingElseWithTtlFunction",
-	{ ttl: (result) => (result.k ? 1000 : 5), stale: 1000 },
-	fetchSomething,
-);
-expectType<typeof fetchSomething>(unionMemoryCache.fetchSomethingElseWithTtlFunction);
 
 expectType<Promise<void>>(cache.clear());
 expectType<Promise<void>>(cache.clear("fetchSomething"));
 expectType<Promise<void>>(cache.clear("fetchSomething", "bar"));
 
-const result = await unionMemoryCache.fetchSomething("test");
+const result = await currentCacheInstance.fetchSomething("test");
+
 expectType<{ k: any }>(result);
 
 await unionMemoryCache.invalidateAll("test:*");
