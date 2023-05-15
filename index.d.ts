@@ -62,16 +62,16 @@ declare class StorageInterface {
 declare function createCache(
 	options?: {
 		storage?: StorageInputRedis | StorageInputMemory;
-		ttl?: number;
+		ttl?: number | ((result: unknown) => number);
 		transformer?: DataTransformer;
-		stale?: number;
+		stale?: number | ((result: unknown) => number);
 	} & Events,
 ): Cache;
 
 declare class Cache {
   constructor(
     options: {
-      ttl: number;
+      ttl: number | ((result: unknown) => number);
       storage: StorageOptionsType;
     } & Events
   );
@@ -83,7 +83,7 @@ declare class Cache {
       storage?: StorageOptionsType;
       transformer?: DataTransformer;
       ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
-      stale?: number;
+      stale?: number | ((result: Awaited<ReturnType<T>>) => number);
       serialize?: (...args: any[]) => any;
       references?: (
 				args: Parameters<T>,

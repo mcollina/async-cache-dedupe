@@ -41,7 +41,7 @@ class Cache {
       throw new Error('onMiss must be a function')
     }
 
-    // ttl _may_ be a function to defer the ttl decision until later
+    // stale _may_ be a function to defer the stale decision until later
     if (typeof options.stale === 'number' && !(Math.floor(options.stale) === options.stale && options.stale >= 0)) {
       throw new Error('stale must be an integer greater or equal to 0')
     }
@@ -259,9 +259,10 @@ class Wrapper {
 
       if (data !== undefined) {
         this.onHit(key)
-        if (this.stale > 0) {
+        const stale = typeof this.stale === 'function' ? this.stale(data) : this.stale
+        if (stale > 0) {
           const remainingTTL = await this.storage.getTTL(storageKey)
-          if (remainingTTL <= this.stale) {
+          if (remainingTTL <= stale) {
             this._wrapFunction(storageKey, args, key).catch(noop)
           }
         }
@@ -276,12 +277,13 @@ class Wrapper {
 
   async _wrapFunction (storageKey, args, key) {
     const result = await this.func(args, key)
+    const stale = typeof this.stale === 'function' ? this.stale(result) : this.stale
     let ttl = typeof this.ttl === 'function' ? this.ttl(result) : this.ttl
     if (ttl === undefined || ttl === null || (typeof ttl !== 'number' || !Number.isInteger(ttl))) {
       this.onError(new Error('ttl must be an integer'))
       return result
     }
-    ttl += this.stale
+    ttl += stale
     if (ttl < 1) {
       return result
     }
