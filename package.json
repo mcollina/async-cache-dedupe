@@ -36,7 +36,7 @@
     "@rollup/plugin-node-resolve": "^15.0.1",
     "browserify": "^17.0.0",
     "buffer": "^6.0.3",
-    "esbuild": "^0.18.2",
+    "esbuild": "^0.19.1",
     "esbuild-plugin-alias": "^0.2.1",
     "events": "^3.3.0",
     "ioredis": "^5.2.3",
