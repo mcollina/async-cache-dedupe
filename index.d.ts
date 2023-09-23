@@ -92,7 +92,7 @@ declare class Cache {
     } & Events,
     func?: T
   ): S & { [n in N]: T };
-  define<T extends (args: any[]) => any, N extends string, S extends this>(
+  define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
     opts: T
   ): S & { [n in N]: T };

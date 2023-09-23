@@ -1,5 +1,5 @@
 // Write a tsd file for the module
-import { expectType } from "tsd";
+import { expectType, expectError, expectNotAssignable, expectAssignable } from "tsd";
 import { createCache, Cache, createStorage } from ".";
 import { StorageInterface, StorageMemoryOptions } from "./index.js";
 
@@ -77,3 +77,27 @@ expectType<{ k: any }>(result);
 
 await unionMemoryCache.invalidateAll("test:*");
 await unionMemoryCache.invalidateAll(["test:1", "test:2", "test:3"], "memory");
+
+// Testing define.func only accepts one argument
+const fetchFuncSingleArgument = async (args: {k1: string, k2:string}) => {
+	console.log("query", args.k1, args.k2);
+	return { k1: args.k1, k2: args.k2 };
+};
+
+
+const fetchFuncMultipleArguments = async (k1: string, k2:string) => {
+	console.log("query", k1, k2);
+	return { k1, k2 };
+};
+
+expectAssignable<Parameters<typeof unionMemoryCache.define>>(["fetchFuncSingleArgument", fetchFuncSingleArgument]);
+expectNotAssignable<Parameters<typeof unionMemoryCache.define>>(["fetchFuncMultipleArguments", fetchFuncMultipleArguments]);
+
+
+// Testing define.opts.references
+memoryCache.define("fetchFuncSingleArgument", {
+  references: (args, key, result) => {
+    expectType<{ k1: string; k2: string }>(args);
+    return [];
+  }
+}, fetchFuncSingleArgument);
