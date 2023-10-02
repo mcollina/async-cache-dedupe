@@ -76,7 +76,7 @@ declare class Cache {
     } & Events
   );
 
-  define<T extends (...args: any[]) => any, N extends string, S extends this>(
+  define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
     opts: {
       storage?: StorageOptionsType;
@@ -85,14 +85,14 @@ declare class Cache {
       stale?: number | ((result: Awaited<ReturnType<T>>) => number);
       serialize?: (...args: any[]) => any;
       references?: (
-        args: Parameters<T>,
+        args: Parameters<T>[0],
         key: string,
         result: Awaited<ReturnType<T>>
       ) => References | Promise<References>;
     } & Events,
     func?: T
   ): S & { [n in N]: T };
-  define<T extends (...args: any[]) => any, N extends string, S extends this>(
+  define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
     opts: T
   ): S & { [n in N]: T };
