@@ -214,6 +214,7 @@ class StorageRedis extends StorageInterface {
     const removed = []
     for (let i = 0; i < keys.length; i++) {
       const key0 = keys[i][1]
+      if (!key0) { continue }
       this.log.debug({ msg: 'acd/storage/redis._invalidateReferences got keys to be invalidated', keys: key0 })
       for (let j = 0; j < key0.length; j++) {
         const key1 = key0[j]
