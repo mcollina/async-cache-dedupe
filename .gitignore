@@ -111,3 +111,5 @@ dump.rdb
 
 # Temporary files used for browser testing
 tmp/
+
+.tap

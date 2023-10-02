@@ -49,7 +49,7 @@
     "snazzy": "^9.0.0",
     "standard": "^17.1.0",
     "stream-browserify": "^3.0.0",
-    "tap": "^18.3.0",
+    "tap": "^18.4",
     "tap-mocha-reporter": "^5.0.4",
     "tap-parser": "^15.2.0",
     "tape": "^5.7.0",

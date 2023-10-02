@@ -5,7 +5,7 @@ const { abstractLogging, isServerSide } = require('../util')
 const StorageInterface = require('./interface')
 const { findMatchingIndexes, findNotMatching, bsearchIndex, wildcardMatch } = require('../util')
 
-// istanbul ignore next
+/* c8 ignore next */
 const setImmediate = isServerSide ? globalThis.setImmediate : (fn, ...args) => setTimeout(fn, 0, ...args)
 
 const DEFAULT_CACHE_SIZE = 1024
@@ -137,10 +137,10 @@ class StorageMemory extends StorageInterface {
         // remove key in old references
         for (const reference of referencesToRemove) {
           const keys = this.referencesKeys.get(reference)
-          // istanbul ignore next
+          /* c8 ignore next */
           if (!keys) { continue }
           const index = bsearchIndex(keys, key)
-          // istanbul ignore next
+          /* c8 ignore next */
           if (index < 0) { continue }
           keys.splice(index, 1)
 
@@ -239,7 +239,7 @@ class StorageMemory extends StorageInterface {
       // working on the original stored array
       const referencesKeys = this.referencesKeys.get(reference)
       this.log.debug({ msg: 'acd/storage/memory._removeReferencesKeys, get reference-key', reference, keys, referencesKeys })
-      // istanbul ignore next
+      /* c8 ignore next */
       if (!referencesKeys) continue
 
       const referencesToRemove = findMatchingIndexes(keys, referencesKeys)
@@ -298,7 +298,6 @@ class StorageMemory extends StorageInterface {
       for (let j = 0; j < keys.length; j++) {
         const key = keys[j]
         this.log.debug({ msg: 'acd/storage/memory._invalidateReferences, remove key on reference', reference, key })
-        // istanbul ignore next
         if (this._removeKey(key)) {
           removed.push(key)
         }
@@ -337,7 +336,6 @@ class StorageMemory extends StorageInterface {
     for (let j = 0; j < keys.length; j++) {
       const key = keys[j]
       this.log.debug({ msg: 'acd/storage/memory._invalidateReference, remove key on reference', reference, key })
-      // istanbul ignore next
       if (this._removeKey(key)) {
         removed.push(key)
       }
@@ -379,7 +377,6 @@ class StorageMemory extends StorageInterface {
     const removed = []
     // remove all keys at first, then references
     for (let i = 0; i < keys.length; i++) {
-      // istanbul ignore next
       if (this._removeKey(keys[i])) {
         removed.push(keys[i])
       }
@@ -405,7 +402,6 @@ function now () {
   }
   _timer = Math.floor(Date.now() / 1000)
   const timeout = setTimeout(_clearTimer, 1000)
-  // istanbul ignore next
   if (typeof timeout.unref === 'function') timeout.unref()
   return _timer
 }
