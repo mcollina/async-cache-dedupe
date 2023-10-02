@@ -561,6 +561,13 @@ test('storage redis', async (t) => {
 
       t.doesNotThrow(() => storage.invalidate(['pizzers']))
     })
+
+    test('should not throw invalidating non-existing references', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+      await redisClient.set('r:model:1', 'value')
+
+      t.doesNotThrow(() => storage.invalidate(['model:1', 'model:2']))
+    })
   })
 
   test('clear', async (t) => {
