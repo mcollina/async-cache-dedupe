@@ -1019,7 +1019,7 @@ test('storage redis', async (t) => {
   })
 
   test('should throw if is not server side and storage is redis', async (t) => {
-    const createStorageMock = t.mock('../src/storage/index.js', {
+    const createStorageMock = t.mockRequire('../src/storage/index.js', {
       '../src/util.js': module.exports = {
         isServerSide: false
       }

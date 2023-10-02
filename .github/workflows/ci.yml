@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [12.x, 14.x, 16.x, 18.x, 19.x, 20.x]
-        redis-tag: [5, 6]
+        node-version: [18.x, 20.x]
+        redis-tag: [6, 7]
     services:
       redis:
         image: redis:${{ matrix.redis-tag }}

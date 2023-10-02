@@ -245,9 +245,7 @@ test('Cache', async (t) => {
       await cache.invalidateAll('foo', 'f')
     })
 
-    test('should rejectes invalidating on non-existing storage', async (t) => {
-      t.plan(1)
-
+    test('should rejects invalidating on non-existing storage', async (t) => {
       const cache = new Cache({
         storage: {
           async invalidate () {
