@@ -173,7 +173,7 @@ Options:
     return result;
   })
 
-  await cache.fetchAccessToken()
+  await cache.fetchUserProfile()
   ```
 
 ### `cache.clear([name], [arg])`
