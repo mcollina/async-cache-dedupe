@@ -1,6 +1,7 @@
 'use strict'
 
-const { test, before, teardown } = require('tap')
+const { test, before, after } = require('node:test')
+const assert = require('assert')
 const Redis = require('ioredis')
 
 const createStorage = require('../src/storage')
@@ -11,7 +12,7 @@ before(async (t) => {
   redisClient = new Redis()
 })
 
-teardown(async (t) => {
+after(async (t) => {
   await redisClient.quit()
 })
 
@@ -21,11 +22,11 @@ test('should handle a custom transformer to store and get data per cache', async
     storage: createStorage(),
     transformer: {
       serialize: (value) => {
-        t.pass('serialize called')
+        assert.ok('serialize called')
         return JSON.stringify(value)
       },
       deserialize: (value) => {
-        t.pass('deserialize called')
+        assert.ok('deserialize called')
         return JSON.parse(value)
       }
     }
@@ -35,8 +36,8 @@ test('should handle a custom transformer to store and get data per cache', async
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('should handle a custom transformer to store and get data per define', async function (t) {
@@ -48,11 +49,11 @@ test('should handle a custom transformer to store and get data per define', asyn
     ttl: 1000,
     transformer: {
       serialize: (value) => {
-        t.pass('serialize called')
+        assert.ok('serialize called')
         return JSON.stringify(value)
       },
       deserialize: (value) => {
-        t.pass('deserialize called')
+        assert.ok('deserialize called')
         return JSON.parse(value)
       }
     }
@@ -60,8 +61,8 @@ test('should handle a custom transformer to store and get data per define', asyn
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('should handle a custom transformer and references function to store and get data per cache', async function (t) {
@@ -70,11 +71,11 @@ test('should handle a custom transformer and references function to store and ge
     storage: createStorage(),
     transformer: {
       serialize: (value) => {
-        t.pass('serialize called')
+        assert.ok('serialize called')
         return JSON.stringify(value)
       },
       deserialize: (value) => {
-        t.pass('deserialize called')
+        assert.ok('deserialize called')
         return JSON.parse(value)
       }
     }
@@ -82,15 +83,15 @@ test('should handle a custom transformer and references function to store and ge
 
   cache.define('fetchSomething', {
     references: (args, key, result) => {
-      t.pass('references called')
+      assert.ok('references called')
       return ['some-reference']
     }
   }, async (query, cacheKey) => {
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('should handle a custom transformer and references function to store and get data per define', async function (t) {
@@ -101,16 +102,16 @@ test('should handle a custom transformer and references function to store and ge
   cache.define('fetchSomething', {
     ttl: 1000,
     references: (args, key, result) => {
-      t.pass('references called')
+      assert.ok('references called')
       return ['some-reference']
     },
     transformer: {
       serialize: (value) => {
-        t.pass('serialize called')
+        assert.ok('serialize called')
         return JSON.stringify(value)
       },
       deserialize: (value) => {
-        t.pass('deserialize called')
+        assert.ok('deserialize called')
         return JSON.parse(value)
       }
     }
@@ -118,6 +119,6 @@ test('should handle a custom transformer and references function to store and ge
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
+  assert.deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
