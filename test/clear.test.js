@@ -90,7 +90,7 @@ test('clears only one method', async (t) => {
 })
 
 test('clears only one method with one value', async (t) => {
-  const { ok, deepStrictEqual } = tspl(t, { plan: 6 })
+  const { ok, deepStrictEqual } = tspl(t, { plan: 5 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
