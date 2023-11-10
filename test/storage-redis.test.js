@@ -1,6 +1,8 @@
 'use strict'
 
-const t = require('tap')
+const { test, describe, beforeEach, after } = require('node:test')
+const assert = require('node:assert')
+const { tspl } = require('@matteo.collina/tspl')
 const { promisify } = require('util')
 const Redis = require('ioredis')
 const proxyquire = require('proxyquire')
@@ -15,47 +17,45 @@ const sleep = promisify(setTimeout)
 
 const redisClient = new Redis()
 
-const { test, before, beforeEach, teardown } = t
-
 function assertInclude (t, array0, array1) {
-  t.equal(array0.length, array1.length)
+  assert.deepStrictEqual(array0.length, array1.length)
   for (const a of array0) {
-    t.ok(array1.includes(a), `${a} should be in ${array1}`)
+    assert.ok(array1.includes(a), `${a} should be in ${array1}`)
   }
 }
 
-before(async () => {
-  await redisClient.flushall()
-})
+describe('storage redis', async () => {
+  beforeEach(async () => {
+    await redisClient.flushall()
+  })
 
-teardown(async () => {
-  await redisClient.quit()
-})
+  after(async () => {
+    redisClient.quit()
+  })
 
-test('storage redis', async (t) => {
   test('should get an instance with default options', async (t) => {
     const storage = createStorage('redis', { client: redisClient })
 
-    t.ok(typeof storage.get === 'function')
-    t.ok(typeof storage.set === 'function')
-    t.ok(typeof storage.remove === 'function')
-    t.ok(typeof storage.invalidate === 'function')
-    t.ok(typeof storage.refresh === 'function')
+    assert.ok(typeof storage.get === 'function')
+    assert.ok(typeof storage.set === 'function')
+    assert.ok(typeof storage.remove === 'function')
+    assert.ok(typeof storage.invalidate === 'function')
+    assert.ok(typeof storage.refresh === 'function')
   })
 
   test('should throw on missing options', async (t) => {
-    t.throws(() => createStorage('redis'))
+    assert.throws(() => createStorage('redis'))
   })
 
   test('should throw on invalid options, missing client', async (t) => {
-    t.throws(() => createStorage('redis', { client: -1 }))
+    assert.throws(() => createStorage('redis', { client: -1 }))
   })
 
   test('should throw on invalid options, invalid referenceTTL', async (t) => {
-    t.throws(() => createStorage('redis', { client: {}, invalidation: { referencesTTL: -1 } }))
+    assert.throws(() => createStorage('redis', { client: {}, invalidation: { referencesTTL: -1 } }))
   })
 
-  test('get', async (t) => {
+  describe('get', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -65,7 +65,7 @@ test('storage redis', async (t) => {
 
       await storage.set('foo', 'bar', 100)
 
-      t.equal(await storage.get('foo'), 'bar')
+      assert.equal(await storage.get('foo'), 'bar')
     })
 
     test('should get undefined retrieving a non stored key', async (t) => {
@@ -73,7 +73,7 @@ test('storage redis', async (t) => {
 
       await storage.set('foo', 'bar', 100)
 
-      t.equal(await storage.get('no-foo'), undefined)
+      assert.equal(await storage.get('no-foo'), undefined)
     })
 
     test('should get undefined retrieving an expired value', async (t) => {
@@ -82,27 +82,28 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar', 1)
       await sleep(2000)
 
-      t.equal(await storage.get('foo'), undefined)
+      assert.equal(await storage.get('foo'), undefined)
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(3)
+      const { equal } = tspl(t, { plan: 3 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.get error')
-            t.equal(error.key, 'foo')
+            equal(error.msg, 'acd/storage/redis.get error')
+            equal(error.key, 'foo')
           }
         }
       })
 
-      t.equal(await storage.get('foo'), undefined)
+      equal(await storage.get('foo'), undefined)
     })
   })
 
-  test('set', async (t) => {
+  describe('set', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -112,10 +113,10 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar', 100)
 
       const value = await storage.store.get('foo')
-      t.equal(JSON.parse(value), 'bar')
+      assert.equal(JSON.parse(value), 'bar')
 
       const ttl = await storage.store.ttl('foo')
-      t.equal(ttl, 100)
+      assert.equal(ttl, 100)
     })
 
     test('should not set a value with ttl < 1', async (t) => {
@@ -123,7 +124,7 @@ test('storage redis', async (t) => {
 
       await storage.set('foo', 'bar', 0)
 
-      t.equal(await storage.get('foo'), undefined)
+      assert.equal(await storage.get('foo'), undefined)
     })
 
     test('should set a value with references', async (t) => {
@@ -131,9 +132,9 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar', 100, ['fooers'])
 
       const value = await storage.store.get('foo')
-      t.equal(JSON.parse(value), 'bar')
+      assert.equal(JSON.parse(value), 'bar')
 
-      t.same(await storage.store.smembers('r:fooers'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:fooers'), ['foo'])
     })
 
     test('should not set an empty references', async (t) => {
@@ -141,9 +142,9 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar', 100, [])
 
       const value = await storage.store.get('foo')
-      t.equal(JSON.parse(value), 'bar')
+      assert.equal(JSON.parse(value), 'bar')
 
-      t.same((await storage.store.keys('r:*')).length, 0)
+      assert.deepStrictEqual((await storage.store.keys('r:*')).length, 0)
     })
 
     test('should set a custom references ttl', async (t) => {
@@ -151,21 +152,21 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar', 100, ['fooers'])
 
       const value = await storage.store.get('foo')
-      t.equal(JSON.parse(value), 'bar')
+      assert.equal(JSON.parse(value), 'bar')
 
-      t.same(await storage.store.smembers('r:fooers'), ['foo'])
-      t.same(await storage.store.ttl('r:fooers'), 10)
+      assert.deepStrictEqual(await storage.store.smembers('r:fooers'), ['foo'])
+      assert.deepStrictEqual(await storage.store.ttl('r:fooers'), 10)
     })
 
     test('should get a warning setting references with invalidation disabled', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
 
       const storage = createStorage('redis', {
         client: redisClient,
         log: {
           debug: () => { },
           warn: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.set, invalidation is disabled, references are useless')
+            equal(error.msg, 'acd/storage/redis.set, invalidation is disabled, references are useless')
           }
         }
       })
@@ -179,10 +180,10 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'new-bar', 100, ['fooers'])
 
       const value = await storage.store.get('foo')
-      t.equal(JSON.parse(value), 'new-bar')
+      assert.equal(JSON.parse(value), 'new-bar')
 
       const references = await storage.store.smembers('r:fooers')
-      t.same(references, ['foo'])
+      assert.deepStrictEqual(references, ['foo'])
     })
 
     test('should add a key to an existing reference', async (t) => {
@@ -192,9 +193,9 @@ test('storage redis', async (t) => {
       await storage.set('foo2', 'bar2', 100, ['fooers'])
 
       const references = await storage.store.smembers('r:fooers')
-      t.equal(references.length, 2)
-      t.ok(references.includes('foo1'))
-      t.ok(references.includes('foo2'))
+      assert.equal(references.length, 2)
+      assert.ok(references.includes('foo1'))
+      assert.ok(references.includes('foo2'))
     })
 
     test('should update the key references, full replace', async (t) => {
@@ -203,10 +204,10 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['booers', 'tooers'])
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.equal((await storage.store.smembers('r:mooers')).length, 0)
-      t.same(await storage.store.smembers('r:booers'), ['foo'])
-      t.same(await storage.store.smembers('r:tooers'), ['foo'])
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('r:mooers')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:booers'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:tooers'), ['foo'])
     })
 
     test('should update the key references, partial replace', async (t) => {
@@ -215,9 +216,9 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar1', 100, ['fooers', 'mooers'])
       await storage.set('foo', 'bar2', 100, ['mooers', 'tooers'])
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.same(await storage.store.smembers('r:mooers'), ['foo'])
-      t.same(await storage.store.smembers('r:tooers'), ['foo'])
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:mooers'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:tooers'), ['foo'])
       assertInclude(t, await storage.store.smembers('k:foo'), ['mooers', 'tooers'])
     })
 
@@ -227,10 +228,10 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar2', 100, ['z', 'b', 'd'])
 
-      t.equal((await storage.store.smembers('r:a')).length, 0)
-      t.same(await storage.store.smembers('r:b'), ['foo'])
-      t.same(await storage.store.smembers('r:d'), ['foo'])
-      t.same(await storage.store.smembers('r:z'), ['foo'])
+      assert.equal((await storage.store.smembers('r:a')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:b'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:d'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:z'), ['foo'])
       assertInclude(t, await storage.store.smembers('k:foo'), ['b', 'd', 'z'])
     })
 
@@ -241,32 +242,33 @@ test('storage redis', async (t) => {
       await storage.set('foo', 'bar1', 100, ['a', 'b'])
       await storage.set('foo', 'bar2', 100, ['z', 'b', 'd'])
 
-      t.same(await storage.store.smembers('r:a'), ['boo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:a'), ['boo'])
       assertInclude(t, await storage.store.smembers('r:b'), ['foo', 'boo'])
-      t.same(await storage.store.smembers('r:d'), ['foo'])
-      t.same(await storage.store.smembers('r:z'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:d'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('r:z'), ['foo'])
 
       assertInclude(t, await storage.store.smembers('k:foo'), ['z', 'd', 'b'])
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(3)
+      const { equal, doesNotThrow } = tspl(t, { plan: 3 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.set error')
-            t.equal(error.key, 'foo')
+            equal(error.msg, 'acd/storage/redis.set error')
+            equal(error.key, 'foo')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.set('foo', 'bar', 1))
+      doesNotThrow(() => storage.set('foo', 'bar', 1))
     })
   })
 
-  test('remove', async (t) => {
+  describe('remove', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -277,7 +279,7 @@ test('storage redis', async (t) => {
 
       await storage.remove('foo')
 
-      t.equal(await storage.get('foo'), undefined)
+      assert.equal(await storage.get('foo'), undefined)
     })
 
     test('should remove an non existing key', async (t) => {
@@ -286,8 +288,8 @@ test('storage redis', async (t) => {
 
       await storage.remove('fooz')
 
-      t.equal(await storage.get('foo'), 'bar')
-      t.equal(await storage.get('fooz'), undefined)
+      assert.equal(await storage.get('foo'), 'bar')
+      assert.equal(await storage.get('fooz'), undefined)
     })
 
     test('should remove an existing key and references', async (t) => {
@@ -296,10 +298,10 @@ test('storage redis', async (t) => {
 
       await storage.remove('foo')
 
-      t.equal(await storage.get('foo'), undefined)
+      assert.equal(await storage.get('foo'), undefined)
 
-      t.same((await storage.store.smembers('r:fooers')).length, 0)
-      t.same((await storage.store.smembers('k:foo')).length, 0)
+      assert.deepStrictEqual((await storage.store.smembers('r:fooers')).length, 0)
+      assert.deepStrictEqual((await storage.store.smembers('k:foo')).length, 0)
     })
 
     test('should remove an non existing key (and references)', async (t) => {
@@ -308,11 +310,11 @@ test('storage redis', async (t) => {
 
       await storage.remove('fooz')
 
-      t.equal(await storage.get('foo'), 'bar')
-      t.equal(await storage.get('fooz'), undefined)
+      assert.equal(await storage.get('foo'), 'bar')
+      assert.equal(await storage.get('fooz'), undefined)
 
-      t.same(await storage.store.smembers('k:foo'), ['fooers'])
-      t.same(await storage.store.smembers('r:fooers'), ['foo'])
+      assert.deepStrictEqual(await storage.store.smembers('k:foo'), ['fooers'])
+      assert.deepStrictEqual(await storage.store.smembers('r:fooers'), ['foo'])
     })
 
     test('should remove a key but not references if still active', async (t) => {
@@ -325,41 +327,42 @@ test('storage redis', async (t) => {
 
       await storage.remove('a')
 
-      t.equal(await storage.get('a'), undefined)
-      t.equal(await storage.get('b'), 1)
-      t.equal(await storage.get('c'), 1)
-      t.equal(await storage.get('d'), 1)
-      t.equal(await storage.get('e'), 1)
+      assert.equal(await storage.get('a'), undefined)
+      assert.equal(await storage.get('b'), 1)
+      assert.equal(await storage.get('c'), 1)
+      assert.equal(await storage.get('d'), 1)
+      assert.equal(await storage.get('e'), 1)
 
       assertInclude(t, await storage.store.smembers('r:fooers'), ['b', 'c'])
       assertInclude(t, await storage.store.smembers('r:consonantes'), ['b', 'c', 'd'])
-      t.same(await storage.store.smembers('r:vowels'), ['e'])
+      assert.deepStrictEqual(await storage.store.smembers('r:vowels'), ['e'])
 
-      t.equal((await storage.store.smembers('k:a')).length, 0)
+      assert.equal((await storage.store.smembers('k:a')).length, 0)
       assertInclude(t, await storage.store.smembers('k:b'), ['fooers', 'consonantes'])
       assertInclude(t, await storage.store.smembers('k:c'), ['fooers', 'consonantes'])
       assertInclude(t, await storage.store.smembers('k:d'), ['consonantes'])
-      t.same(await storage.store.smembers('k:e'), ['vowels'])
+      assert.deepStrictEqual(await storage.store.smembers('k:e'), ['vowels'])
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(3)
+      const { equal, doesNotThrow } = tspl(t, { plan: 3 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.remove error')
-            t.equal(error.key, 'foo')
+            equal(error.msg, 'acd/storage/redis.remove error')
+            equal(error.key, 'foo')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.remove('foo'))
+      doesNotThrow(() => storage.remove('foo'))
     })
   })
 
-  test('invalidate', async (t) => {
+  describe('invalidate', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -372,9 +375,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate(['fooers'])
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should not remove storage keys by not existing reference', async (t) => {
@@ -385,9 +388,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate(['buzzers'])
 
-      t.equal(await storage.get('foo~1'), 'bar')
-      t.equal(await storage.get('foo~2'), 'baz')
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), 'bar')
+      assert.equal(await storage.get('foo~2'), 'baz')
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should invalide more than one reference at once', async (t) => {
@@ -398,9 +401,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate(['fooers', 'booers'])
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), undefined)
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), undefined)
     })
 
     test('should remove storage keys by references, but not the ones still alive', async (t) => {
@@ -413,16 +416,16 @@ test('storage redis', async (t) => {
 
       assertInclude(t, removed, ['foo~1', 'foo~boo'])
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~boo'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~boo'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.equal((await storage.store.smembers('r:foo:1')).length, 0)
-      t.same(await storage.store.smembers('r:booers'), ['boo~1'])
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('r:foo:1')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:booers'), ['boo~1'])
 
-      t.equal((await storage.store.smembers('k:foo~1')).length, 0)
-      t.equal((await storage.store.smembers('k:foo~boo')).length, 0)
+      assert.equal((await storage.store.smembers('k:foo~1')).length, 0)
+      assert.equal((await storage.store.smembers('k:foo~boo')).length, 0)
       assertInclude(t, await storage.store.smembers('k:boo~1'), ['booers', 'boo:1'])
     })
 
@@ -436,22 +439,22 @@ test('storage redis', async (t) => {
 
       await storage.invalidate(['fooers'])
 
-      t.equal(await storage.get('a'), undefined)
-      t.equal(await storage.get('b'), undefined)
-      t.equal(await storage.get('c'), undefined)
-      t.equal(await storage.get('d'), 1)
-      t.equal(await storage.get('e'), 1)
+      assert.equal(await storage.get('a'), undefined)
+      assert.equal(await storage.get('b'), undefined)
+      assert.equal(await storage.get('c'), undefined)
+      assert.equal(await storage.get('d'), 1)
+      assert.equal(await storage.get('e'), 1)
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.equal((await storage.store.smembers('r:empty')).length, 0)
-      t.same(await storage.store.smembers('r:consonantes'), ['d'])
-      t.same(await storage.store.smembers('r:vowels'), ['e'])
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('r:empty')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:consonantes'), ['d'])
+      assert.deepStrictEqual(await storage.store.smembers('r:vowels'), ['e'])
 
-      t.equal((await storage.store.smembers('k:a')).length, 0)
-      t.equal((await storage.store.smembers('k:b')).length, 0)
-      t.equal((await storage.store.smembers('k:c')).length, 0)
-      t.same(await storage.store.smembers('k:d'), ['consonantes'])
-      t.same(await storage.store.smembers('k:e'), ['vowels'])
+      assert.equal((await storage.store.smembers('k:a')).length, 0)
+      assert.equal((await storage.store.smembers('k:b')).length, 0)
+      assert.equal((await storage.store.smembers('k:c')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('k:d'), ['consonantes'])
+      assert.deepStrictEqual(await storage.store.smembers('k:e'), ['vowels'])
     })
 
     test('should invalidate by a string', async (t) => {
@@ -462,9 +465,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate('fooers')
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should invalidate by an array of strings', async (t) => {
@@ -475,9 +478,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate(['fooers', 'booers'])
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), undefined)
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), undefined)
     })
 
     test('should invalidate with wildcard one asterisk', async (t) => {
@@ -488,9 +491,9 @@ test('storage redis', async (t) => {
 
       await storage.invalidate('foo:*')
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should invalidate with wildcard two asterisk', async (t) => {
@@ -503,11 +506,11 @@ test('storage redis', async (t) => {
 
       await storage.invalidate('f*1*')
 
-      t.equal(await storage.get('foo~01'), '0')
-      t.equal(await storage.get('foo~02'), '0')
-      t.equal(await storage.get('foo~11'), undefined)
-      t.equal(await storage.get('foo~12'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~01'), '0')
+      assert.equal(await storage.get('foo~02'), '0')
+      assert.equal(await storage.get('foo~11'), undefined)
+      assert.equal(await storage.get('foo~12'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should invalidate all with wildcard', async (t) => {
@@ -521,56 +524,57 @@ test('storage redis', async (t) => {
 
       await storage.invalidate('*')
 
-      t.equal(await storage.get('a'), undefined)
-      t.equal(await storage.get('b'), undefined)
-      t.equal(await storage.get('c'), undefined)
-      t.equal(await storage.get('d'), undefined)
-      t.equal(await storage.get('e'), undefined)
-      t.equal(await storage.get('f'), undefined)
+      assert.equal(await storage.get('a'), undefined)
+      assert.equal(await storage.get('b'), undefined)
+      assert.equal(await storage.get('c'), undefined)
+      assert.equal(await storage.get('d'), undefined)
+      assert.equal(await storage.get('e'), undefined)
+      assert.equal(await storage.get('f'), undefined)
     })
 
     test('should get a warning with invalidation disabled', async (t) => {
-      t.plan(2)
+      const { equal, deepStrictEqual } = tspl(t, { plan: 2 })
 
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           warn: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.invalidate, exit due invalidation is disabled')
+            equal(error.msg, 'acd/storage/redis.invalidate, exit due invalidation is disabled')
           }
         }
       })
 
-      t.same(await storage.invalidate(['something']), [])
+      deepStrictEqual(await storage.invalidate(['something']), [])
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(3)
+      const { equal, deepStrictEqual, doesNotThrow } = tspl(t, { plan: 3 })
+
       const storage = createStorage('redis', {
         client: {},
         invalidation: true,
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.invalidate error')
-            t.same(error.references, ['pizzers'])
+            equal(error.msg, 'acd/storage/redis.invalidate error')
+            deepStrictEqual(error.references, ['pizzers'])
           }
         }
       })
 
-      t.doesNotThrow(() => storage.invalidate(['pizzers']))
+      doesNotThrow(() => storage.invalidate(['pizzers']))
     })
 
     test('should not throw invalidating non-existing references', async (t) => {
       const storage = createStorage('redis', { client: redisClient, invalidation: true })
       await redisClient.set('r:model:1', 'value')
 
-      t.doesNotThrow(() => storage.invalidate(['model:1', 'model:2']))
+      assert.doesNotThrow(() => storage.invalidate(['model:1', 'model:2']))
     })
   })
 
-  test('clear', async (t) => {
+  describe('clear', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -582,7 +586,7 @@ test('storage redis', async (t) => {
 
       await storage.clear()
 
-      t.equal(await storage.store.dbsize(), 0)
+      assert.equal(await storage.store.dbsize(), 0)
     })
 
     test('should clear the whole storage (invalidation enabled)', async (t) => {
@@ -592,7 +596,7 @@ test('storage redis', async (t) => {
 
       await storage.clear()
 
-      t.equal(await storage.store.dbsize(), 0)
+      assert.equal(await storage.store.dbsize(), 0)
     })
 
     test('should clear only keys with common name', async (t) => {
@@ -603,9 +607,9 @@ test('storage redis', async (t) => {
 
       await storage.clear('foo~')
 
-      t.equal(await storage.get('foo~1'), undefined)
-      t.equal(await storage.get('foo~2'), undefined)
-      t.equal(await storage.get('boo~1'), 'fiz')
+      assert.equal(await storage.get('foo~1'), undefined)
+      assert.equal(await storage.get('foo~2'), undefined)
+      assert.equal(await storage.get('boo~1'), 'fiz')
     })
 
     test('should clear a keys and their references', async (t) => {
@@ -618,42 +622,43 @@ test('storage redis', async (t) => {
 
       await storage.clear('a-')
 
-      t.equal(await storage.get('a-a'), undefined)
-      t.equal(await storage.get('a-b'), undefined)
-      t.equal(await storage.get('a-c'), undefined)
-      t.equal(await storage.get('b-d'), 1)
-      t.equal(await storage.get('b-e'), 1)
+      assert.equal(await storage.get('a-a'), undefined)
+      assert.equal(await storage.get('a-b'), undefined)
+      assert.equal(await storage.get('a-c'), undefined)
+      assert.equal(await storage.get('b-d'), 1)
+      assert.equal(await storage.get('b-e'), 1)
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.equal((await storage.store.smembers('r:empty')).length, 0)
-      t.same(await storage.store.smembers('r:consonantes'), ['b-d'])
-      t.same(await storage.store.smembers('r:vowels'), ['b-e'])
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('r:empty')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('r:consonantes'), ['b-d'])
+      assert.deepStrictEqual(await storage.store.smembers('r:vowels'), ['b-e'])
 
-      t.equal((await storage.store.smembers('k:a-a')).length, 0)
-      t.equal((await storage.store.smembers('k:a-b')).length, 0)
-      t.equal((await storage.store.smembers('k:a-c')).length, 0)
-      t.same(await storage.store.smembers('k:b-d'), ['consonantes'])
-      t.same(await storage.store.smembers('k:b-e'), ['vowels'])
+      assert.equal((await storage.store.smembers('k:a-a')).length, 0)
+      assert.equal((await storage.store.smembers('k:a-b')).length, 0)
+      assert.equal((await storage.store.smembers('k:a-c')).length, 0)
+      assert.deepStrictEqual(await storage.store.smembers('k:b-d'), ['consonantes'])
+      assert.deepStrictEqual(await storage.store.smembers('k:b-e'), ['vowels'])
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(3)
+      const { equal, doesNotThrow } = tspl(t, { plan: 3 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.clear error')
-            t.equal(error.name, 'foo')
+            equal(error.msg, 'acd/storage/redis.clear error')
+            equal(error.name, 'foo')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.clear('foo'))
+      doesNotThrow(() => storage.clear('foo'))
     })
   })
 
-  test('refresh', async (t) => {
+  describe('refresh', async () => {
     beforeEach(async () => {
       await redisClient.flushall()
     })
@@ -664,26 +669,27 @@ test('storage redis', async (t) => {
 
       await storage.refresh()
 
-      t.equal(await storage.store.dbsize(), 0)
+      assert.equal(await storage.store.dbsize(), 0)
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.refresh error')
+            equal(error.msg, 'acd/storage/redis.refresh error')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.refresh())
+      doesNotThrow(() => storage.refresh())
     })
   })
 
-  test('clearReferences', async (t) => {
+  describe('clearReferences', async () => {
     test('should clear keys references', async (t) => {
       const storage = createStorage('redis', { client: redisClient })
       await storage.set('a', 1, 10, ['fooers', 'vowels', 'empty'])
@@ -694,10 +700,10 @@ test('storage redis', async (t) => {
 
       await storage.clearReferences(['a', 'b', 'c', 'd', 'e'])
 
-      t.equal((await storage.store.smembers('r:fooers')).length, 0)
-      t.equal((await storage.store.smembers('r:empty')).length, 0)
-      t.equal((await storage.store.smembers('r:vowels')).length, 0)
-      t.equal((await storage.store.smembers('r:consonantes')).length, 0)
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('r:empty')).length, 0)
+      assert.equal((await storage.store.smembers('r:vowels')).length, 0)
+      assert.equal((await storage.store.smembers('r:consonantes')).length, 0)
     })
 
     test('should clear a key references when expires', async (t) => {
@@ -711,20 +717,21 @@ test('storage redis', async (t) => {
 
       await sleep(ttl * 1000 + 500)
 
-      t.equal((await storage.store.smembers('r:1')).length, 0)
-      t.equal((await storage.store.smembers('r:2')).length, 0)
-      t.equal((await storage.store.smembers('r:3')).length, 0)
-      t.equal((await storage.store.smembers('r:4')).length, 0)
+      assert.equal((await storage.store.smembers('r:1')).length, 0)
+      assert.equal((await storage.store.smembers('r:2')).length, 0)
+      assert.equal((await storage.store.smembers('r:3')).length, 0)
+      assert.equal((await storage.store.smembers('r:4')).length, 0)
     })
 
     test('should get a warning calling with empty key', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           warn: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.clearReferences invalid call due to empty key')
+            equal(error.msg, 'acd/storage/redis.clearReferences invalid call due to empty key')
           }
         }
       })
@@ -733,30 +740,32 @@ test('storage redis', async (t) => {
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.clearReferences error')
+            equal(error.msg, 'acd/storage/redis.clearReferences error')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.clearReferences('the-key'))
+      doesNotThrow(() => storage.clearReferences('the-key'))
     })
   })
 
-  test('gc', async (t) => {
+  describe('gc', async () => {
     test('should get a warning calling on disabled invalidation', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const storage = createStorage('redis', {
         client: {},
         log: {
           debug: () => { },
           warn: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.gc does not run due to invalidation is disabled')
+            equal(error.msg, 'acd/storage/redis.gc does not run due to invalidation is disabled')
           }
         }
       })
@@ -765,7 +774,8 @@ test('storage redis', async (t) => {
     })
 
     test('should not throw on error', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', {
         client: {},
         invalidation: true,
@@ -773,41 +783,44 @@ test('storage redis', async (t) => {
           debug: () => { },
           warn: () => { },
           error: (error) => {
-            t.equal(error.msg, 'acd/storage/redis.gc error')
+            equal(error.msg, 'acd/storage/redis.gc error')
           }
         }
       })
 
-      t.doesNotThrow(() => storage.gc())
+      doesNotThrow(() => storage.gc())
     })
 
     test('should not throw on invalid options, chunk', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', { client: {}, invalidation: true })
 
-      t.doesNotThrow(async () => {
+      doesNotThrow(async () => {
         const report = await storage.gc('zzz', { chunk: -1 })
-        t.equal(report.error.message, 'chunk must be a positive integer greater than 1')
+        equal(report.error.message, 'chunk must be a positive integer greater than 1')
       })
     })
 
     test('should not throw on invalid options, lazy.chunk', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', { client: {}, invalidation: true })
 
-      t.doesNotThrow(async () => {
+      doesNotThrow(async () => {
         const report = await storage.gc('zzz', { lazy: { chunk: -1 } })
-        t.equal(report.error.message, 'lazy.chunk must be a positive integer greater than 1')
+        equal(report.error.message, 'lazy.chunk must be a positive integer greater than 1')
       })
     })
 
     test('should not throw on invalid options, lazy.cursor', async (t) => {
-      t.plan(2)
+      const { equal, doesNotThrow } = tspl(t, { plan: 2 })
+
       const storage = createStorage('redis', { client: {}, invalidation: true })
 
-      t.doesNotThrow(async () => {
+      doesNotThrow(async () => {
         const report = await storage.gc('zzz', { lazy: { cursor: -1 } })
-        t.equal(report.error.message, 'lazy.cursor must be a positive integer greater than 0')
+        equal(report.error.message, 'lazy.cursor must be a positive integer greater than 0')
       })
     })
 
@@ -817,11 +830,11 @@ test('storage redis', async (t) => {
         invalidation: true
       })
 
-      t.ok((await storage.gc()).error instanceof Error)
+      assert.ok((await storage.gc()).error instanceof Error)
     })
 
-    test('strict mode', async (t) => {
-      t.beforeEach(async () => {
+    describe('strict mode', async () => {
+      beforeEach(async () => {
         await redisClient.flushall()
       })
 
@@ -837,16 +850,16 @@ test('storage redis', async (t) => {
 
         await storage.gc('strict')
 
-        t.same(await storage.store.smembers('k:e'), ['vowels'])
-        t.equal((await storage.store.smembers('k:a')).length, 0)
-        t.equal((await storage.store.smembers('k:b')).length, 0)
-        t.equal((await storage.store.smembers('k:c')).length, 0)
-        t.equal((await storage.store.smembers('k:d')).length, 0)
+        assert.deepStrictEqual(await storage.store.smembers('k:e'), ['vowels'])
+        assert.equal((await storage.store.smembers('k:a')).length, 0)
+        assert.equal((await storage.store.smembers('k:b')).length, 0)
+        assert.equal((await storage.store.smembers('k:c')).length, 0)
+        assert.equal((await storage.store.smembers('k:d')).length, 0)
 
-        t.same((await storage.store.smembers('r:vowels')), ['e'])
-        t.equal(await storage.store.exists('r:fooers'), 0)
-        t.equal(await storage.store.exists('r:empty'), 0)
-        t.equal(await storage.store.exists('r:consonantes'), 0)
+        assert.deepStrictEqual((await storage.store.smembers('r:vowels')), ['e'])
+        assert.equal(await storage.store.exists('r:fooers'), 0)
+        assert.equal(await storage.store.exists('r:empty'), 0)
+        assert.equal(await storage.store.exists('r:consonantes'), 0)
       })
 
       test('should run a gc without cleaning', async (t) => {
@@ -864,13 +877,13 @@ test('storage redis', async (t) => {
         assertInclude(t, await storage.store.smembers('k:a'), ['fooers', 'vowels', 'empty'])
         assertInclude(t, await storage.store.smembers('k:b'), ['fooers', 'consonantes'])
         assertInclude(t, await storage.store.smembers('k:c'), ['fooers', 'consonantes'])
-        t.same(await storage.store.smembers('k:d'), ['consonantes'])
-        t.same(await storage.store.smembers('k:e'), ['vowels'])
+        assert.deepStrictEqual(await storage.store.smembers('k:d'), ['consonantes'])
+        assert.deepStrictEqual(await storage.store.smembers('k:e'), ['vowels'])
 
         assertInclude(t, await storage.store.smembers('r:vowels'), ['a', 'e'])
         assertInclude(t, await storage.store.smembers('r:fooers'), ['a', 'b', 'c'])
         assertInclude(t, await storage.store.smembers('r:consonantes'), ['b', 'c', 'd'])
-        t.same(await storage.store.smembers('r:empty'), ['a'])
+        assert.deepStrictEqual(await storage.store.smembers('r:empty'), ['a'])
       })
 
       test('should get stats on full gc', async (t) => {
@@ -889,13 +902,13 @@ test('storage redis', async (t) => {
 
         const report = await storage.gc('strict', { chunk: 10 })
 
-        t.equal(report.references.scanned.length, 103)
-        t.equal(report.references.removed.length, 103)
-        t.equal(report.keys.scanned.length, 100)
-        t.equal(report.keys.removed.length, 100)
-        t.equal(report.cursor, 0)
-        t.ok(report.loops > 2)
-        t.equal(report.error, null)
+        assert.equal(report.references.scanned.length, 103)
+        assert.equal(report.references.removed.length, 103)
+        assert.equal(report.keys.scanned.length, 100)
+        assert.equal(report.keys.removed.length, 100)
+        assert.equal(report.cursor, 0)
+        assert.ok(report.loops > 2)
+        assert.equal(report.error, null)
       })
 
       test('should run on an empty storage', async (t) => {
@@ -903,18 +916,18 @@ test('storage redis', async (t) => {
 
         const report = await storage.gc('strict', { chunk: 10 })
 
-        t.equal(report.references.scanned.length, 0)
-        t.equal(report.references.removed.length, 0)
-        t.equal(report.keys.scanned.length, 0)
-        t.equal(report.keys.removed.length, 0)
-        t.equal(report.cursor, 0)
-        t.ok(report.loops > 0)
-        t.equal(report.error, null)
+        assert.equal(report.references.scanned.length, 0)
+        assert.equal(report.references.removed.length, 0)
+        assert.equal(report.keys.scanned.length, 0)
+        assert.equal(report.keys.removed.length, 0)
+        assert.equal(report.cursor, 0)
+        assert.ok(report.loops > 0)
+        assert.equal(report.error, null)
       })
     })
 
-    test('lazy mode', async (t) => {
-      t.beforeEach(async () => {
+    describe('lazy mode', async () => {
+      beforeEach(async () => {
         await redisClient.flushall()
       })
 
@@ -923,13 +936,13 @@ test('storage redis', async (t) => {
 
         const report = await storage.gc('lazy')
 
-        t.equal(report.references.scanned.length, 0)
-        t.equal(report.references.removed.length, 0)
-        t.equal(report.keys.scanned.length, 0)
-        t.equal(report.keys.removed.length, 0)
-        t.equal(report.cursor, 0)
-        t.ok(report.loops > 0)
-        t.equal(report.error, null)
+        assert.equal(report.references.scanned.length, 0)
+        assert.equal(report.references.removed.length, 0)
+        assert.equal(report.keys.scanned.length, 0)
+        assert.equal(report.keys.removed.length, 0)
+        assert.equal(report.cursor, 0)
+        assert.ok(report.loops > 0)
+        assert.equal(report.error, null)
       })
 
       test('should get stats on lazy run', async (t) => {
@@ -950,13 +963,13 @@ test('storage redis', async (t) => {
 
         const report = await storage.gc('lazy', { lazy: { chunk } })
 
-        t.ok(report.references.scanned.length > 1)
-        t.ok(report.references.removed.length > 1)
-        t.ok(report.keys.scanned.length > 1)
-        t.ok(report.keys.removed.length > 1)
-        t.ok(report.cursor > 1)
-        t.ok(report.loops > 0)
-        t.equal(report.error, null)
+        assert.ok(report.references.scanned.length > 1)
+        assert.ok(report.references.removed.length > 1)
+        assert.ok(report.keys.scanned.length > 1)
+        assert.ok(report.keys.removed.length > 1)
+        assert.ok(report.cursor > 1)
+        assert.ok(report.loops > 0)
+        assert.equal(report.error, null)
       })
 
       test('should clean the whole storage in some cycles', async (t) => {
@@ -980,58 +993,70 @@ test('storage redis', async (t) => {
           cursor = report.cursor
         }
 
-        t.equal((await storage.store.keys('*')).length, 0)
+        assert.equal((await storage.store.keys('*')).length, 0)
       })
     })
   })
 
-  test('getTTL', async (t) => {
+  describe('getTTL', async () => {
     test('should get the TTL of a previously key stored', async (t) => {
+      t.after(async () => {
+        await redisClient.flushall()
+      })
+
       const storage = new StorageRedis({ client: redisClient, invalidation: false })
 
       storage.set('foo', 'bar', 100)
 
-      t.equal(await storage.getTTL('foo'), 100)
+      assert.equal(await storage.getTTL('foo'), 100)
 
       await sleep(1000)
 
-      t.equal(await storage.getTTL('foo'), 99)
+      assert.equal(await storage.getTTL('foo'), 99)
     })
 
     test('should get the TTL of a a key without TTL', async (t) => {
+      t.after(async () => {
+        await redisClient.flushall()
+      })
+
       const storage = new StorageRedis({ client: redisClient, invalidation: false })
 
       storage.set('foo', 'bar', 0)
 
-      t.equal(await storage.getTTL('foo'), 0)
+      assert.equal(await storage.getTTL('foo'), 0)
     })
 
     test('should get the TTL of a previously key stored', async (t) => {
+      t.after(async () => {
+        await redisClient.flushall()
+      })
+
       const storage = new StorageRedis({ client: redisClient, invalidation: false })
 
       storage.set('foo', 'bar', 1)
 
-      t.equal(await storage.getTTL('foo'), 1)
+      assert.equal(await storage.getTTL('foo'), 1)
 
       await sleep(1000)
 
-      t.equal(await storage.getTTL('foo'), 0)
+      assert.equal(await storage.getTTL('foo'), 0)
     })
 
     test('no key', async (t) => {
       const storage = new StorageRedis({ client: redisClient, invalidation: false })
 
-      t.equal(await storage.getTTL('foo'), 0)
+      assert.equal(await storage.getTTL('foo'), 0)
     })
   })
 
   test('should throw if is not server side and storage is redis', async (t) => {
-    const createStorageMock = t.mockRequire('../src/storage/index.js', {
-      '../src/util.js': module.exports = {
-        isServerSide: false
-      }
+    const createStorage = proxyquire('../src/storage/index.js', {
+      '../util': { isServerSide: false }
     })
 
-    t.throws(() => createStorageMock('redis', { client: redisClient }), 'Redis storage is not supported in the browser')
+    assert.throws(() => createStorage('redis', { client: redisClient }), {
+      message: 'Redis storage is not supported in the browser'
+    })
   })
 })
