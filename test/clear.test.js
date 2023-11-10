@@ -1,29 +1,26 @@
 'use strict'
 
-const t = require('tap')
+const { test } = require('node:test')
+const { tspl } = require('@matteo.collina/tspl')
 const { Cache } = require('../src/cache')
 const createStorage = require('../src/storage')
 
-const { test } = t
-
-t.jobs = 3
-
 test('clear the full cache', async (t) => {
-  t.plan(7)
+  const { ok, deepStrictEqual } = tspl(t, { plan: 7 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
-    t.pass('a called')
+    ok('a called')
     return { k: query }
   })
 
   cache.define('fetchB', async (query) => {
-    t.pass('b called')
+    ok('b called')
     return { j: query }
   })
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -31,7 +28,7 @@ test('clear the full cache', async (t) => {
     { j: 24 }
   ])
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -41,7 +38,7 @@ test('clear the full cache', async (t) => {
 
   cache.clear()
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -51,21 +48,21 @@ test('clear the full cache', async (t) => {
 })
 
 test('clears only one method', async (t) => {
-  t.plan(6)
+  const { ok, deepStrictEqual } = tspl(t, { plan: 6 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
-    t.pass('a called')
+    ok('a called')
     return { k: query }
   })
 
   cache.define('fetchB', async (query) => {
-    t.pass('b called')
+    ok('b called')
     return { j: query }
   })
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -73,7 +70,7 @@ test('clears only one method', async (t) => {
     { j: 24 }
   ])
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -83,7 +80,7 @@ test('clears only one method', async (t) => {
 
   cache.clear('fetchA')
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchB(24)
   ]), [
@@ -93,16 +90,16 @@ test('clears only one method', async (t) => {
 })
 
 test('clears only one method with one value', async (t) => {
-  t.plan(5)
+  const { ok, deepStrictEqual } = tspl(t, { plan: 6 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   cache.define('fetchA', async (query) => {
-    t.pass('a called')
+    ok('a called')
     return { k: query }
   })
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchA(24)
   ]), [
@@ -112,7 +109,7 @@ test('clears only one method with one value', async (t) => {
 
   cache.clear('fetchA', 42)
 
-  t.same(await Promise.all([
+  deepStrictEqual(await Promise.all([
     cache.fetchA(42),
     cache.fetchA(24)
   ]), [
