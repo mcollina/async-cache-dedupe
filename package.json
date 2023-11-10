@@ -5,7 +5,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "standard | snazzy && tap test/*test.js && tsd",
+    "test": "standard | snazzy && node --test test/*.js && tsd",
     "test:browser": "node test/browser/helpers/runner-browser.mjs",
     "lint:fix": "standard --fix",
     "redis": "docker run --rm -p 6379:6379 redis redis-server"
@@ -50,7 +50,6 @@
     "snazzy": "^9.0.0",
     "standard": "^17.1.0",
     "stream-browserify": "^3.0.0",
-    "tap": "^18.4",
     "tap-mocha-reporter": "^5.0.4",
     "tap-parser": "^15.2.0",
     "tape": "^5.7.0",
