@@ -5,7 +5,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "standard | snazzy && node --test test/*.js && tsd",
+    "test": "standard | snazzy && c8 --100 node --test test/*.js && tsd",
     "test:browser": "node test/browser/helpers/runner-browser.mjs",
     "lint:fix": "standard --fix",
     "redis": "docker run --rm -p 6379:6379 redis redis-server"
@@ -37,6 +37,7 @@
     "@rollup/plugin-node-resolve": "^15.2.1",
     "browserify": "^17.0.0",
     "buffer": "^6.0.3",
+    "c8": "^8.0.1",
     "esbuild": "^0.19.4",
     "esbuild-plugin-alias": "^0.2.1",
     "events": "^3.3.0",
