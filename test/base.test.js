@@ -1,6 +1,6 @@
 'use strict'
 
-const { describe, test, before, after } = require('node:test')
+const { describe, test, beforeEach, afterEach } = require('node:test')
 const assert = require('node:assert')
 const { tspl } = require('@matteo.collina/tspl')
 const Redis = require('ioredis')
@@ -20,11 +20,11 @@ const dummyStorage = {
 }
 
 let redisClient
-before(async (t) => {
+beforeEach(async () => {
   redisClient = new Redis()
 })
 
-after(async (t) => {
+afterEach(async () => {
   await redisClient.quit()
 })
 
