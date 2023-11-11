@@ -1,13 +1,13 @@
 'use strict'
 
-const { test, describe, after } = require('node:test')
+const { test, describe, after, before } = require('node:test')
 const assert = require('assert')
 const Redis = require('ioredis')
 
 const createStorage = require('../src/storage')
 const { Cache } = require('../')
 
-let redisClient;
+let redisClient
 
 describe('transformer', async function () {
   before(async () => {
