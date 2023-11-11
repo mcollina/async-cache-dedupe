@@ -1,6 +1,6 @@
 'use strict'
 
-const { test, describe, beforeEach, after } = require('node:test')
+const { test, describe, before, beforeEach, after } = require('node:test')
 const assert = require('node:assert')
 const { tspl } = require('@matteo.collina/tspl')
 const { promisify } = require('util')
@@ -25,7 +25,7 @@ function assertInclude (t, array0, array1) {
 }
 
 describe('storage redis', async () => {
-  beforeEach(async () => {
+  before(async () => {
     await redisClient.flushall()
   })
 
