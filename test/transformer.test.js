@@ -7,9 +7,13 @@ const Redis = require('ioredis')
 const createStorage = require('../src/storage')
 const { Cache } = require('../')
 
-const redisClient = new Redis()
+let redisClient;
 
-describe('transformer', function () {
+describe('transformer', async function () {
+  before(async () => {
+    redisClient = new Redis()
+  })
+
   after(async () => {
     await redisClient.quit()
   })
