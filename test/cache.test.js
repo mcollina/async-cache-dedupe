@@ -1,39 +1,39 @@
 'use strict'
 
-const t = require('tap')
+const { describe, test } = require('node:test')
+const assert = require('node:assert')
+const { tspl } = require('@matteo.collina/tspl')
 const { Cache } = require('../src/cache')
 const createStorage = require('../src/storage')
 const { kStorage, kStorages } = require('../src/symbol')
 
-const { test } = t
-
-test('Cache', async (t) => {
-  test('should get an instance with default options', async (t) => {
+describe('Cache', async (t) => {
+  test('should get an instance with default options', async () => {
     const cache = new Cache({ storage: createStorage() })
 
-    t.ok(typeof cache.define === 'function')
-    t.ok(typeof cache.clear === 'function')
-    t.ok(typeof cache.get === 'function')
-    t.ok(typeof cache.set === 'function')
-    t.ok(typeof cache.invalidate === 'function')
+    assert.ok(typeof cache.define === 'function')
+    assert.ok(typeof cache.clear === 'function')
+    assert.ok(typeof cache.get === 'function')
+    assert.ok(typeof cache.set === 'function')
+    assert.ok(typeof cache.invalidate === 'function')
   })
 
-  test('define', async (t) => {
-    test('should define an instance with storage options', async (t) => {
+  describe('define', async () => {
+    test('should define an instance with storage options', async () => {
       const cache = new Cache({ storage: createStorage() })
 
       cache.define('different-storage', { storage: createStorage('memory', { invalidation: true }) }, () => {})
-      t.equal(cache[kStorages].get('different-storage').invalidation, true)
+      assert.equal(cache[kStorages].get('different-storage').invalidation, true)
     })
   })
 
-  test('get', async (t) => {
+  describe('get', async () => {
     test('should use storage to get a value', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
       const cache = new Cache({
         storage: {
           async get (key) {
-            t.equal(key, 'foo')
+            equal(key, 'foo')
           }
         }
       })
@@ -43,26 +43,26 @@ test('Cache', async (t) => {
     })
 
     test('should get an error trying to use get of not defined name', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
       const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.get('fiiii', 'key').catch((err) => {
-        t.equal(err.message, 'fiiii is not defined in the cache')
+        equal(err.message, 'fiiii is not defined in the cache')
       })
     })
 
     test('should bypass storage when ttl is 0', async (t) => {
-      t.plan(1)
+      const { equal, fail } = tspl(t, { plan: 1 })
       const cache = new Cache({ storage: createStorage() })
       cache[kStorage].get = () => {
-        t.fail('should bypass storage')
+        fail('should bypass storage')
       }
       cache[kStorage].set = () => {
-        t.fail('should bypass storage')
+        fail('should bypass storage')
       }
       cache.define('f', { ttl: 0 }, async (k) => {
-        t.equal(k, 'foo')
+        equal(k, 'foo')
 
         return { k }
       })
@@ -72,13 +72,14 @@ test('Cache', async (t) => {
   })
 
   test('should bypass setting value in storage if ttl function returns 0', async (t) => {
-    t.plan(1)
+    const { equal, fail } = tspl(t, { plan: 1 })
+
     const cache = new Cache({ storage: createStorage() })
     cache[kStorage].set = () => {
-      t.fail('should bypass storage')
+      fail('should bypass storage')
     }
     cache.define('f', { ttl: (_data) => { return 0 } }, async (k) => {
-      t.equal(k, 'foo')
+      equal(k, 'foo')
 
       return { k }
     })
@@ -87,15 +88,16 @@ test('Cache', async (t) => {
   })
 
   test('should set value in storage if ttl function returns > 0', async (t) => {
-    t.plan(4)
+    const { equal } = tspl(t, { plan: 4 })
+
     const cache = new Cache({ storage: createStorage() })
     cache[kStorage].set = (key, value, ttl) => {
-      t.equal(key, 'f~foo')
-      t.equal(value.k, 'foo')
-      t.equal(ttl, 1)
+      equal(key, 'f~foo')
+      equal(value.k, 'foo')
+      equal(ttl, 1)
     }
     cache.define('f', { ttl: (data) => { return 1 } }, async (k) => {
-      t.equal(k, 'foo')
+      equal(k, 'foo')
 
       return { k }
     })
@@ -104,16 +106,17 @@ test('Cache', async (t) => {
   })
 
   test('should call onError and bypass storage if ttl fn returns non-integer', async (t) => {
-    t.plan(2)
+    const { equal, fail } = tspl(t, { plan: 2 })
+
     const cache = new Cache({ storage: createStorage() })
     cache[kStorage].set = () => {
-      t.fail('should bypass storage')
+      fail('should bypass storage')
     }
     const onError = (err) => {
-      t.equal(err.message, 'ttl must be an integer')
+      equal(err.message, 'ttl must be an integer')
     }
     cache.define('f', { ttl: (data) => { return 3.14 }, onError }, async (k) => {
-      t.equal(k, 'foo')
+      equal(k, 'foo')
 
       return { k }
     })
@@ -122,16 +125,17 @@ test('Cache', async (t) => {
   })
 
   test('should call onError and bypass storage if ttl fn returns undefined', async (t) => {
-    t.plan(2)
+    const { equal, fail } = tspl(t, { plan: 2 })
+
     const cache = new Cache({ storage: createStorage() })
     cache[kStorage].set = () => {
-      t.fail('should bypass storage')
+      fail('should bypass storage')
     }
     const onError = (err) => {
-      t.equal(err.message, 'ttl must be an integer')
+      equal(err.message, 'ttl must be an integer')
     }
     cache.define('f', { ttl: (data) => { return undefined }, onError }, async (k) => {
-      t.equal(k, 'foo')
+      equal(k, 'foo')
 
       return { k }
     })
@@ -140,16 +144,17 @@ test('Cache', async (t) => {
   })
 
   test('should call onError and bypass storage if ttl fn returns non-number', async (t) => {
-    t.plan(2)
+    const { equal, fail } = tspl(t, { plan: 2 })
+
     const cache = new Cache({ storage: createStorage() })
     cache[kStorage].set = () => {
-      t.fail('should bypass storage')
+      fail('should bypass storage')
     }
     const onError = (err) => {
-      t.equal(err.message, 'ttl must be an integer')
+      equal(err.message, 'ttl must be an integer')
     }
     cache.define('f', { ttl: (data) => { return '3' }, onError }, async (k) => {
-      t.equal(k, 'foo')
+      equal(k, 'foo')
 
       return { k }
     })
@@ -157,16 +162,17 @@ test('Cache', async (t) => {
     await cache.f('foo')
   })
 
-  test('set', async (t) => {
+  describe('set', async (t) => {
     test('should use storage to set a value', async (t) => {
-      t.plan(4)
+      const { equal, deepStrictEqual } = tspl(t, { plan: 4 })
+
       const cache = new Cache({
         storage: {
           async set (key, value, ttl, references) {
-            t.equal(key, 'foo')
-            t.equal(value, 'bar')
-            t.equal(ttl, 9)
-            t.same(references, ['fooers'])
+            equal(key, 'foo')
+            equal(value, 'bar')
+            equal(ttl, 9)
+            deepStrictEqual(references, ['fooers'])
           }
         }
       })
@@ -176,23 +182,25 @@ test('Cache', async (t) => {
     })
 
     test('should get an error trying to use set of not defined name', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.set('fiiii', 'key', 'value').catch((err) => {
-        t.equal(err.message, 'fiiii is not defined in the cache')
+        equal(err.message, 'fiiii is not defined in the cache')
       })
     })
   })
 
-  test('invalidate', async (t) => {
+  describe('invalidate', async (t) => {
     test('should use storage to get a value', async (t) => {
-      t.plan(1)
+      const { deepStrictEqual } = tspl(t, { plan: 1 })
+
       const cache = new Cache({
         storage: {
           async invalidate (references) {
-            t.same(references, ['foo'])
+            deepStrictEqual(references, ['foo'])
           }
         }
       })
@@ -202,23 +210,25 @@ test('Cache', async (t) => {
     })
 
     test('should get an error trying to invalidate of not defined name', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.invalidate('fiiii', ['references']).catch((err) => {
-        t.equal(err.message, 'fiiii is not defined in the cache')
+        equal(err.message, 'fiiii is not defined in the cache')
       })
     })
   })
 
-  test('invalidateAll', async (t) => {
+  describe('invalidateAll', async (t) => {
     test('should call invalidate on default storage', async (t) => {
-      t.plan(1)
+      const { deepStrictEqual } = tspl(t, { plan: 1 })
+
       const cache = new Cache({
         storage: {
           async invalidate (references) {
-            t.same(references, ['foo'])
+            deepStrictEqual(references, ['foo'])
           }
         }
       })
@@ -228,7 +238,8 @@ test('Cache', async (t) => {
     })
 
     test('should call invalidate on specific storage', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const cache = new Cache({
         storage: {
           async invalidate () {
@@ -239,17 +250,17 @@ test('Cache', async (t) => {
 
       cache.define('f', { storage: {} }, () => 'the-value')
       cache[kStorages].get('f').invalidate = async (references) => {
-        t.equal(references, 'foo')
+        equal(references, 'foo')
       }
 
       await cache.invalidateAll('foo', 'f')
     })
 
-    test('should rejects invalidating on non-existing storage', async (t) => {
+    test('should rejects invalidating on non-existing storage', async () => {
       const cache = new Cache({
         storage: {
           async invalidate () {
-            t.fail('should not call default storage')
+            assert.fail('should not call default storage')
           }
         }
       })
@@ -258,17 +269,20 @@ test('Cache', async (t) => {
         { storage: { type: 'memory', options: { size: 1 } } },
         () => 'the-value')
 
-      await t.rejects(cache.invalidateAll('foo', 'not-a-storage'), 'not-a-storage storage is not defined in the cache')
+      await assert.rejects(cache.invalidateAll('foo', 'not-a-storage'), {
+        message: 'not-a-storage storage is not defined in the cache'
+      })
     })
   })
 
-  test('clear', async (t) => {
+  describe('clear', async (t) => {
     test('should use storage to clear a value by name', async (t) => {
-      t.plan(1)
+      const { deepStrictEqual } = tspl(t, { plan: 1 })
+
       const cache = new Cache({
         storage: {
           async remove (value) {
-            t.same(value, 'f~foo')
+            deepStrictEqual(value, 'f~foo')
           }
         }
       })
@@ -278,12 +292,13 @@ test('Cache', async (t) => {
     })
 
     test('should get an error trying to clear of not defined name', async (t) => {
-      t.plan(1)
+      const { equal } = tspl(t, { plan: 1 })
+
       const cache = new Cache({ storage: createStorage() })
       cache.define('f', () => 'the-value')
 
       cache.clear('fiiii').catch((err) => {
-        t.equal(err.message, 'fiiii is not defined in the cache')
+        equal(err.message, 'fiiii is not defined in the cache')
       })
     })
   })

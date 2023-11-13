@@ -1,6 +1,7 @@
 'use strict'
 
-const { test } = require('tap')
+const { test } = require('node:test')
+const assert = require('node:assert')
 const { bsearchIndex, randomSubset, wildcardMatch } = require('../src/util')
 
 test('bsearchIndex', async t => {
@@ -17,7 +18,7 @@ test('bsearchIndex', async t => {
 
   for (const case_ of cases) {
     const result = bsearchIndex(...case_.input)
-    t.equal(result, case_.output)
+    assert.equal(result, case_.output)
   }
 })
 
@@ -32,8 +33,8 @@ test('randomSubset', async t => {
 
   for (const case_ of cases) {
     const result = randomSubset(case_.array, case_.size)
-    t.ok(result.length > 0)
-    t.ok(result.length <= case_.size)
+    assert.ok(result.length > 0)
+    assert.ok(result.length <= case_.size)
   }
 
   cases = [
@@ -43,7 +44,7 @@ test('randomSubset', async t => {
 
   for (const case_ of cases) {
     const result = randomSubset(case_.array, case_.size)
-    t.equal(result.length, case_.resultLength)
+    assert.equal(result.length, case_.resultLength)
   }
 })
 
@@ -67,6 +68,6 @@ test('wildcardMatch', async t => {
   ]
 
   for (const case_ of cases) {
-    t.equal(wildcardMatch(case_.value, case_.content), case_.result, `${case_.value} ${case_.content} => ${case_.result}`)
+    assert.equal(wildcardMatch(case_.value, case_.content), case_.result, `${case_.value} ${case_.content} => ${case_.result}`)
   }
 })

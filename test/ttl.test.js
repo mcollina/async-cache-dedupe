@@ -1,18 +1,15 @@
 'use strict'
 
-const t = require('tap')
+const { test } = require('node:test')
+const { tspl } = require('@matteo.collina/tspl')
 const { promisify } = require('util')
 const { Cache } = require('../src/cache')
 const createStorage = require('../src/storage')
 
 const sleep = promisify(setTimeout)
 
-const { test } = t
-
-t.jobs = 3
-
 test('ttl', async (t) => {
-  t.plan(5)
+  const { equal, deepStrictEqual } = tspl(t, { plan: 5 })
 
   const cache = new Cache({
     storage: createStorage(),
@@ -20,42 +17,42 @@ test('ttl', async (t) => {
   })
 
   cache.define('fetchSomething', async (query) => {
-    t.equal(query, 42)
+    equal(query, 42)
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 
   await sleep(2500)
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('global ttl is a positive integer', async (t) => {
-  t.plan(1)
+  const { equal } = tspl(t, { plan: 1 })
 
   try {
     // eslint-disable-next-line no-new
     new Cache({ ttl: 3.14, storage: createStorage() })
   } catch (err) {
-    t.equal(err.message, 'ttl must be a positive integer greater than 0')
+    equal(err.message, 'ttl must be a positive integer greater than 0')
   }
 })
 
 test('function ttl is a positive integer', async (t) => {
-  t.plan(1)
+  const { equal } = tspl(t, { plan: 1 })
 
   const cache = new Cache({ storage: createStorage() })
   try {
     cache.define('fetchSomething', { ttl: 3.14 }, async (k) => ({ k }))
   } catch (err) {
-    t.equal(err.message, 'ttl must be a positive integer greater than 0')
+    equal(err.message, 'ttl must be a positive integer greater than 0')
   }
 })
 
 test('ttl expires', async (t) => {
-  t.plan(5)
+  const { equal, deepStrictEqual } = tspl(t, { plan: 5 })
 
   const cache = new Cache({
     storage: createStorage(),
@@ -63,29 +60,29 @@ test('ttl expires', async (t) => {
   })
 
   cache.define('fetchSomething', async (query) => {
-    t.equal(query, 42)
+    equal(query, 42)
     return { k: query }
   })
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 
   await sleep(1000)
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 
   await sleep(3000)
 
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('do not cache failures', async (t) => {
-  t.plan(4)
+  const { ok, deepStrictEqual, rejects } = tspl(t, { plan: 4 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
   let called = false
   cache.define('fetchSomething', async (query) => {
-    t.pass('called')
+    ok('called')
     if (!called) {
       called = true
       throw new Error('kaboom')
@@ -93,12 +90,12 @@ test('do not cache failures', async (t) => {
     return { k: query }
   })
 
-  await t.rejects(cache.fetchSomething(42))
-  t.same(await cache.fetchSomething(42), { k: 42 })
+  await rejects(cache.fetchSomething(42))
+  deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 })
 
 test('function ttl has precedence over global ttl', async (t) => {
-  t.plan(1)
+  const { equal } = tspl(t, { plan: 1 })
 
   const cache = new Cache({ ttl: 42, storage: createStorage() })
 
@@ -111,11 +108,11 @@ test('function ttl has precedence over global ttl', async (t) => {
   await cache.fetchSomething(42)
   await cache.fetchSomething(42)
 
-  t.same(callCount, 2)
+  equal(callCount, 2)
 })
 
 test('ttl as a function', async (t) => {
-  t.plan(2)
+  const { equal } = tspl(t, { plan: 2 })
 
   const cache = new Cache({ storage: createStorage() })
 
@@ -128,9 +125,9 @@ test('ttl as a function', async (t) => {
   await cache.fetchSomething(42)
   await cache.fetchSomething(42)
   await cache.fetchSomething(42)
-  t.same(callCount, 1)
+  equal(callCount, 1)
 
   await sleep(3000)
   await cache.fetchSomething(42)
-  t.same(callCount, 2)
+  equal(callCount, 2)
 })

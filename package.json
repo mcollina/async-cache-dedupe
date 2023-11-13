@@ -5,7 +5,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "standard | snazzy && tap test/*test.js && tsd",
+    "test": "standard | snazzy && c8 --100 node --test test/*test.js && tsd",
     "test:browser": "node test/browser/helpers/runner-browser.mjs",
     "lint:fix": "standard --fix",
     "redis": "docker run --rm -p 6379:6379 redis redis-server"
@@ -31,11 +31,13 @@
   "license": "MIT",
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",
+    "@matteo.collina/tspl": "^0.1.0",
     "@rollup/plugin-commonjs": "^25.0.4",
     "@rollup/plugin-inject": "^5.0.3",
     "@rollup/plugin-node-resolve": "^15.2.1",
     "browserify": "^17.0.0",
     "buffer": "^6.0.3",
+    "c8": "^8.0.1",
     "esbuild": "^0.19.4",
     "esbuild-plugin-alias": "^0.2.1",
     "events": "^3.3.0",
@@ -49,7 +51,6 @@
     "snazzy": "^9.0.0",
     "standard": "^17.1.0",
     "stream-browserify": "^3.0.0",
-    "tap": "^18.4",
     "tap-mocha-reporter": "^5.0.4",
     "tap-parser": "^15.2.0",
     "tape": "^5.7.0",
