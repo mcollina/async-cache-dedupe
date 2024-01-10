@@ -163,7 +163,7 @@ Options:
 
   cache.define('fetchUserProfile', {
     ttl: 60,
-    state: (result) => result.staleWhileRevalidateInSeconds
+    stale: (result) => result.staleWhileRevalidateInSeconds
   }, async () => {
     
     const response = await fetch("https://example.com/token");
