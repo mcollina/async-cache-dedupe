@@ -7,7 +7,7 @@ const { promisify } = require('util')
 
 const sleep = promisify(setTimeout)
 
-describe('storage memory (cloudflare)', async () => {
+describe('storage memory (cloudflare)', { skip: process.version < 20 }, async () => {
   let worker
 
   before(async () => {
