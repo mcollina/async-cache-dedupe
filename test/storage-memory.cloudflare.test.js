@@ -18,7 +18,7 @@ describe('storage memory (cloudflare)', { skip: process.version < 20 }, async ()
     await worker.stop()
   })
 
-  test('able to invalidate without error', async () => {
+  test('does not throw an error when invalidating', async () => {
     let resp = await worker.fetch()
     assert.equal(resp.status, 200)
     sleep(2500)
