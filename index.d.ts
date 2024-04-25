@@ -2,6 +2,11 @@ import { Redis } from "ioredis";
 
 type StorageOptionsType = "redis" | "memory";
 
+type StorageOptions = {
+  type: StorageOptionsType,
+	options: StorageRedisOptions | StorageMemoryOptions,
+}
+
 type References = string | string[];
 
 interface LoggerInput {
@@ -72,14 +77,15 @@ declare class Cache {
   constructor(
     options: {
       ttl: number | ((result: unknown) => number);
-      storage: StorageOptionsType;
+      stale?: number | ((result: unknown) => number);
+      storage: StorageInterface;
     } & Events
   );
 
   define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
     opts: {
-      storage?: StorageOptionsType;
+      storage?: StorageOptions;
       transformer?: DataTransformer;
       ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
       stale?: number | ((result: Awaited<ReturnType<T>>) => number);
