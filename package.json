@@ -6,6 +6,7 @@
   "types": "index.d.ts",
   "scripts": {
     "test": "standard | snazzy && c8 --100 node --test test/*test.js && tsd",
+    "test:types": "tsd",
     "test:browser": "node test/browser/helpers/runner-browser.mjs",
     "lint:fix": "standard --fix",
     "redis": "docker run --rm -p 6379:6379 redis redis-server"

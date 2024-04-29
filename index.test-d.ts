@@ -6,7 +6,7 @@ import { StorageInterface, StorageMemoryOptions } from "./index.js";
 // Testing internal types
 
 const storageOptions: StorageMemoryOptions = {
-	size: 1000,
+  size: 1000,
 };
 
 const cache = createCache();
@@ -16,30 +16,37 @@ const storage = createStorage("memory", storageOptions);
 expectType<StorageInterface>(storage);
 
 const memoryCache = createCache({
-	storage: {
-		type: "memory",
-		options: storageOptions,
-	},
+  storage: {
+    type: "memory",
+    options: storageOptions,
+  },
 });
 expectType<Cache>(memoryCache);
 
 const cacheWithTtlAndStale = createCache({
-	ttl: 1000,
-	stale: 1000,
+  ttl: 1000,
+  stale: 1000,
 });
 expectType<Cache>(cacheWithTtlAndStale);
+
+const cacheClass = new Cache({
+  ttl: 1000,
+  stale: 1000,
+  storage: createStorage('memory', {})
+});
+expectType<Cache>(cacheClass);
 
 // Testing Union Types
 
 const fetchSomething = async (k: any) => {
-	console.log("query", k);
-	return { k };
+  console.log("query", k);
+  return { k };
 };
 
 export type CachedFunctions = {
-	fetchSomething: typeof fetchSomething;
-	fetchSomethingElse: typeof fetchSomething;
-	fetchSomethingElseWithTtlFunction: typeof fetchSomething;
+  fetchSomething: typeof fetchSomething;
+  fetchSomethingElse: typeof fetchSomething;
+  fetchSomethingElseWithTtlFunction: typeof fetchSomething;
 };
 
 const unionMemoryCache = createCache({
@@ -60,11 +67,19 @@ const currentCacheInstance = unionMemoryCache
     "fetchSomethingElseWithTtlFunction",
     { ttl: (result) => (result.k ? 1000 : 5), stale: 1000 },
     fetchSomething
+  )
+  .define(
+    "fetchSomethingElseWithCustomStorage",
+    {storage: {'type': 'memory', options: {size: 10}}, stale: 1000 },
+    fetchSomething
   );
 expectType<typeof fetchSomething>(currentCacheInstance.fetchSomething);
 expectType<typeof fetchSomething>(currentCacheInstance.fetchSomethingElse);
 expectType<typeof fetchSomething>(
   currentCacheInstance.fetchSomethingElseWithTtlFunction
+);
+expectType<typeof fetchSomething>(
+  currentCacheInstance.fetchSomethingElseWithCustomStorage
 );
 
 expectType<Promise<void>>(cache.clear());
@@ -80,14 +95,14 @@ await unionMemoryCache.invalidateAll(["test:1", "test:2", "test:3"], "memory");
 
 // Testing define.func only accepts one argument
 const fetchFuncSingleArgument = async (args: {k1: string, k2:string}) => {
-	console.log("query", args.k1, args.k2);
-	return { k1: args.k1, k2: args.k2 };
+  console.log("query", args.k1, args.k2);
+  return { k1: args.k1, k2: args.k2 };
 };
 
 
 const fetchFuncMultipleArguments = async (k1: string, k2:string) => {
-	console.log("query", k1, k2);
-	return { k1, k2 };
+  console.log("query", k1, k2);
+  return { k1, k2 };
 };
 
 expectAssignable<Parameters<typeof unionMemoryCache.define>>(["fetchFuncSingleArgument", fetchFuncSingleArgument]);
