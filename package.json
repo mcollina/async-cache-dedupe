@@ -39,7 +39,7 @@
     "browserify": "^17.0.0",
     "buffer": "^6.0.3",
     "c8": "^10.1.2",
-    "esbuild": "^0.21.5",
+    "esbuild": "^0.22.0",
     "esbuild-plugin-alias": "^0.2.1",
     "events": "^3.3.0",
     "ioredis": "^5.3.2",
