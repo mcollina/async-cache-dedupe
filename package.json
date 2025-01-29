@@ -62,7 +62,7 @@
     "wrangler": "^3.28.1"
   },
   "dependencies": {
-    "mnemonist": "^0.39.5",
+    "mnemonist": "^0.40.0",
     "safe-stable-stringify": "^2.4.3"
   },
   "standard": {
