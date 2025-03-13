@@ -59,7 +59,7 @@
     "vite": "^6.0.6",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4",
-    "wrangler": "^3.28.1"
+    "wrangler": "^4.0.0"
   },
   "dependencies": {
     "mnemonist": "^0.40.1",
