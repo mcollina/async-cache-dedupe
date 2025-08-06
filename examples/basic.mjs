@@ -2,9 +2,12 @@ import { createCache } from 'async-cache-dedupe'
 
 const cache = createCache({
   ttl: 5, // default ttl, in seconds
-  storage: { type: 'memory', options: {
-    size: 2048, // entries to store for each defined function
-  }},
+  storage: {
+    type: 'memory',
+    options: {
+      size: 2048, // entries to store for each defined function
+    }
+  },
   onDedupe: (key) => {
     console.log('deduped', key)
   },
