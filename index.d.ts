@@ -1,6 +1,6 @@
 import { Redis } from "ioredis";
 
-export type StorageOptionsType = "redis" | "memory";
+export type StorageOptionsType = "redis" | "memory" | "custom";
 
 export type StorageOptions = {
   type: StorageOptionsType,
@@ -136,6 +136,7 @@ export declare class Cache {
 
 export declare function createStorage(type: "redis", options: StorageRedisOptions): StorageInterface;
 export declare function createStorage(type: "memory", options: StorageMemoryOptions): StorageInterface;
+export declare function createStorage(type: "custom", options: StorageCustomOptions): StorageInterface;
 export declare function createStorage(
   type: StorageOptionsType,
   options: StorageRedisOptions | StorageMemoryOptions,
