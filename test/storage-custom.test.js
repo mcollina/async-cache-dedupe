@@ -4,6 +4,8 @@ const { test, describe } = require('node:test')
 const assert = require('node:assert')
 const proxyquire = require('proxyquire')
 const createStorage = require('../src/storage')
+const { createCache, StorageInterface } = require('..')
+const { default: tspl } = require('@matteo.collina/tspl')
 
 const dummyStorage = {
   async get (key) { },
@@ -27,13 +29,33 @@ describe('storage custom', async () => {
     assert.ok(typeof storage.getTTL === 'function')
   })
 
-  test('should throw if is not server side and storage is redis', async (t) => {
+  test('should throw if storage not defined', async (t) => {
     const createStorage = proxyquire('../src/storage/index.js', {
       '../util': { isServerSide: false }
     })
 
     assert.throws(() => createStorage('custom', { }), {
       message: 'Storage is required for custom storage type'
+    })
+  })
+
+  test('should throw if get function not defined', async (t) => {
+    const { strictEqual } = tspl(t, { plan: 1 })
+    class CustomStorage extends StorageInterface {}
+    const cache = createCache({
+      ttl: 100,
+      storage: {
+        type: 'custom',
+        options: {
+          storage: new CustomStorage()
+        }
+      }
+    })
+
+    cache.define('test', () => 'test-cache-2')
+
+    cache.test().catch((err) => {
+      strictEqual(err.message, 'storage get method not implemented')
     })
   })
 })

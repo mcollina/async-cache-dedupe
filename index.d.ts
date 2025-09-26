@@ -31,6 +31,10 @@ export interface StorageMemoryOptions {
   invalidation?: boolean;
 }
 
+export interface StorageCustomOptions {
+  storage: StorageInterface
+}
+
 interface DataTransformer {
   serialize: (data: any) => any;
   deserialize: (data: any) => any;
@@ -53,6 +57,11 @@ export type StorageInputMemory = {
   options?: StorageMemoryOptions;
 };
 
+export type StorageInputCustom = {
+  type: "custom";
+  options?: StorageCustomOptions;
+}
+
 export declare class StorageInterface {
   constructor(options: any);
 
@@ -66,7 +75,7 @@ export declare class StorageInterface {
 
 export declare function createCache(
   options?: {
-    storage?: StorageInputRedis | StorageInputMemory;
+    storage?: StorageInputRedis | StorageInputMemory | StorageInputCustom;
     ttl?: number | ((result: unknown) => number);
     transformer?: DataTransformer;
     stale?: number | ((result: unknown) => number);
