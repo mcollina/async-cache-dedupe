@@ -17,8 +17,14 @@ const StorageMemory = require('./memory')
  */
 const StorageOptionsType = {
   redis: 'redis',
-  memory: 'memory'
+  memory: 'memory',
+  custom: 'custom'
 }
+
+/**
+ * @typedef StorageCustomOptions
+ * @property {StorageInterface} storage
+ */
 
 /**
  * @typedef {Object} StorageOptions
@@ -28,12 +34,20 @@ const StorageOptionsType = {
 /**
  * factory for storage, depending on type
  * @param {StorageOptionsType} type
- * @param {StorageMemoryOptions|StorageRedisOptions} options
+ * @param {StorageMemoryOptions|StorageRedisOptions|StorageCustomOptions} options
  * @returns {StorageMemory|StorageRedis}
  */
 function createStorage (type, options) {
   if (!isServerSide && type === StorageOptionsType.redis) {
     throw new Error('Redis storage is not supported in the browser')
+  }
+
+  if (type === 'custom') {
+    if (!options.storage) {
+      throw new Error('Storage is required for custom storage type')
+    }
+
+    return options.storage
   }
 
   if (type === StorageOptionsType.redis) {
