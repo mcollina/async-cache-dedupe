@@ -1,6 +1,7 @@
 'use strict'
 
 const { isServerSide } = require('../util')
+const StorageInterface = require('./interface')
 
 let StorageRedis
 if (isServerSide) {
@@ -42,17 +43,22 @@ function createStorage (type, options) {
     throw new Error('Redis storage is not supported in the browser')
   }
 
+  if (type === StorageOptionsType.redis) {
+    return new StorageRedis(options)
+  }
+
   if (type === 'custom') {
     if (!options.storage) {
       throw new Error('Storage is required for custom storage type')
     }
 
+    if (!(options.storage instanceof StorageInterface)) {
+      throw new Error('Custom storage must be instance of interface')
+    }
+
     return options.storage
   }
 
-  if (type === StorageOptionsType.redis) {
-    return new StorageRedis(options)
-  }
   return new StorageMemory(options)
 }
 

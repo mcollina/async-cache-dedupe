@@ -2,24 +2,22 @@
 
 const { test, describe } = require('node:test')
 const assert = require('node:assert')
-const proxyquire = require('proxyquire')
 const createStorage = require('../src/storage')
 const { createCache, StorageInterface } = require('..')
 const { default: tspl } = require('@matteo.collina/tspl')
 
-const dummyStorage = {
-  async get (key) { },
-  async set (key, value, ttl, references) { },
-  async remove (key) { },
-  async invalidate (references) { },
-  async clear () { },
-  async refresh () { },
-  async getTTL () { }
-}
-
 describe('storage custom', async () => {
   test('should get an instance with default options', async () => {
-    const storage = createStorage('custom', { storage: dummyStorage })
+    class CustomStorage extends StorageInterface {
+      async get (key) { }
+      async set (key, value, ttl, references) { }
+      async remove (key) { }
+      async invalidate (references) { }
+      async clear () { }
+      async refresh () { }
+      async getTTL () { }
+    }
+    const storage = createStorage('custom', { storage: new CustomStorage() })
 
     assert.ok(typeof storage.get === 'function')
     assert.ok(typeof storage.set === 'function')
@@ -30,12 +28,16 @@ describe('storage custom', async () => {
   })
 
   test('should throw if storage not defined', async (t) => {
-    const createStorage = proxyquire('../src/storage/index.js', {
-      '../util': { isServerSide: false }
-    })
-
     assert.throws(() => createStorage('custom', { }), {
       message: 'Storage is required for custom storage type'
+    })
+  })
+
+  test('should throw if storage is not instance of interface', async (t) => {
+    class CustomStorage {}
+
+    assert.throws(() => createStorage('custom', { storage: new CustomStorage() }), {
+      message: 'Custom storage must be instance of interface'
     })
   })
 
