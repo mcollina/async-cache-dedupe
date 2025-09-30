@@ -33,11 +33,26 @@ describe('storage custom', async () => {
     })
   })
 
-  test('should throw if storage is not instance of interface', async (t) => {
+  test('should throw if storage is not implemented with required functions', async (t) => {
     class CustomStorage {}
 
     assert.throws(() => createStorage('custom', { storage: new CustomStorage() }), {
-      message: 'Custom storage must be instance of interface'
+      message: 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.'
+    })
+  })
+
+  test('should throw error for missing getTTL', async () => {
+    class CustomStorage {
+      async get (key) { }
+      async set (key, value, ttl, references) { }
+      async remove (key) { }
+      async invalidate (references) { }
+      async clear () { }
+      async refresh () { }
+    }
+
+    assert.throws(() => createStorage('custom', { storage: new CustomStorage() }), {
+      message: 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.'
     })
   })
 

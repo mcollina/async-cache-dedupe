@@ -1,7 +1,6 @@
 'use strict'
 
-const { isServerSide } = require('../util')
-const StorageInterface = require('./interface')
+const { isServerSide, validateCustomStorage } = require('../util')
 
 let StorageRedis
 if (isServerSide) {
@@ -52,8 +51,8 @@ function createStorage (type, options) {
       throw new Error('Storage is required for custom storage type')
     }
 
-    if (!(options.storage instanceof StorageInterface)) {
-      throw new Error('Custom storage must be instance of interface')
+    if (!validateCustomStorage(options.storage)) {
+      throw new Error('Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.')
     }
 
     return options.storage
