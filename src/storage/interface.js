@@ -30,7 +30,10 @@ class StorageInterface {
    */
   async clear (name) { throw new Error('storage clear method not implemented') }
   async refresh () { throw new Error('storage refresh method not implemented') }
-  async getTTL () { throw new Error('storage getTTL method not implemented') }
+  /**
+   * @param {string} key
+   */
+  async getTTL (key) { throw new Error('storage getTTL method not implemented') }
 }
 
 module.exports = StorageInterface

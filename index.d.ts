@@ -71,6 +71,7 @@ export declare class StorageInterface {
   invalidate(references: References): Promise<void>;
   clear(name: string): Promise<void>;
   refresh(): Promise<void>;
+  getTTL(key: string): Promise<void>;
 }
 
 export declare function createCache(
