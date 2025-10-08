@@ -116,3 +116,18 @@ memoryCache.define("fetchFuncSingleArgument", {
     return [];
   }
 }, fetchFuncSingleArgument);
+
+class CustomStorage extends StorageInterface { }
+
+// createStorage with valid custom storage
+const custom = new CustomStorage({});
+const storageCustom = createStorage('custom', { storage: custom });
+expectType<StorageInterface>(storageCustom);
+
+const customCache = createCache({
+  storage: {
+    type: "custom",
+    options: { storage: custom },
+  },
+});
+expectType<Cache>(customCache);

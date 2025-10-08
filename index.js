@@ -1,5 +1,6 @@
 const { Cache } = require('./src/cache')
 const createStorage = require('./src/storage')
+const StorageInterface = require('./src/storage/interface')
 
 /**
    * @param {!Object} options
@@ -25,5 +26,6 @@ function createCache (options) {
 module.exports = {
   Cache,
   createCache,
-  createStorage
+  createStorage,
+  StorageInterface
 }

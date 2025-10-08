@@ -1,6 +1,6 @@
 import { Redis } from "ioredis";
 
-export type StorageOptionsType = "redis" | "memory";
+export type StorageOptionsType = "redis" | "memory" | "custom";
 
 export type StorageOptions = {
   type: StorageOptionsType,
@@ -31,6 +31,10 @@ export interface StorageMemoryOptions {
   invalidation?: boolean;
 }
 
+export interface StorageCustomOptions {
+  storage: StorageInterface
+}
+
 interface DataTransformer {
   serialize: (data: any) => any;
   deserialize: (data: any) => any;
@@ -53,6 +57,11 @@ export type StorageInputMemory = {
   options?: StorageMemoryOptions;
 };
 
+export type StorageInputCustom = {
+  type: "custom";
+  options?: StorageCustomOptions;
+}
+
 export declare class StorageInterface {
   constructor(options: any);
 
@@ -62,11 +71,12 @@ export declare class StorageInterface {
   invalidate(references: References): Promise<void>;
   clear(name: string): Promise<void>;
   refresh(): Promise<void>;
+  getTTL(key: string): Promise<void>;
 }
 
 export declare function createCache(
   options?: {
-    storage?: StorageInputRedis | StorageInputMemory;
+    storage?: StorageInputRedis | StorageInputMemory | StorageInputCustom;
     ttl?: number | ((result: unknown) => number);
     transformer?: DataTransformer;
     stale?: number | ((result: unknown) => number);
@@ -127,6 +137,7 @@ export declare class Cache {
 
 export declare function createStorage(type: "redis", options: StorageRedisOptions): StorageInterface;
 export declare function createStorage(type: "memory", options: StorageMemoryOptions): StorageInterface;
+export declare function createStorage(type: "custom", options: StorageCustomOptions): StorageInterface;
 export declare function createStorage(
   type: StorageOptionsType,
   options: StorageRedisOptions | StorageMemoryOptions,

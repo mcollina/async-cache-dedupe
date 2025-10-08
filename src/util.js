@@ -141,6 +141,11 @@ function abstractLogging () {
   }
 }
 
+function validateCustomStorage (storage) {
+  const methods = ['get', 'set', 'invalidate', 'remove', 'clear', 'getTTL']
+  return methods.every((method) => typeof storage[method] === 'function')
+}
+
 const isServerSide = typeof window === 'undefined'
 
 module.exports = {
@@ -150,5 +155,6 @@ module.exports = {
   wildcardMatch,
   randomSubset,
   abstractLogging,
-  isServerSide
+  isServerSide,
+  validateCustomStorage
 }

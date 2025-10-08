@@ -320,6 +320,42 @@ setInterval(() => {
 
 ```
 
+### Custom storage
+
+Allow users to provide their own storage implementation that conforms to the expected async interface. 
+
+```js
+const { StorageInterface } = require('async-cache-dedupe')
+
+class CustomStorage extends StorageInterface {
+  async get (key) { } // Retrieve value from your storage
+  async set (key, value, ttl, references) { } // Store value in your storage with TTL and references
+  async remove (key) { } // Remove value by key
+  async invalidate (references) { } // Invalidate all entries with given references
+  async clear () { } // Clear entire cache
+  async refresh () { } // Used internally for TTL refresh logic
+  async getTTL (key) { // Return TTL for a key}
+}
+
+const { createStorage, Cache } = require('async-cache-dedupe')
+
+const storage = createStorage('custom', {
+  storage: new CustomStorage({
+    // You can set the optiions required for the custom storage
+  })
+})
+
+const cache = createCache({
+  ttl: 5,
+  storage: { type: 'custom', options: { storage } },
+})
+```
+
+- When using the `custom` storage type, you must provide a valid storage instance via the options.
+- You can refer to the [Redis](https://github.com/mcollina/async-cache-dedupe/blob/main/src/storage/redis.js) or [Memory](https://github.com/mcollina/async-cache-dedupe/blob/main/src/storage/memory.js) storage implementation for guidance.
+- Ensure your storage implementation is compatible with your runtime environment (server or client).
+
+
 ---
 
 ## TypeScript

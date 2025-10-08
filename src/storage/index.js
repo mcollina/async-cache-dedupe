@@ -1,6 +1,6 @@
 'use strict'
 
-const { isServerSide } = require('../util')
+const { isServerSide, validateCustomStorage } = require('../util')
 
 let StorageRedis
 if (isServerSide) {
@@ -17,8 +17,14 @@ const StorageMemory = require('./memory')
  */
 const StorageOptionsType = {
   redis: 'redis',
-  memory: 'memory'
+  memory: 'memory',
+  custom: 'custom'
 }
+
+/**
+ * @typedef StorageCustomOptions
+ * @property {StorageInterface} storage
+ */
 
 /**
  * @typedef {Object} StorageOptions
@@ -28,7 +34,7 @@ const StorageOptionsType = {
 /**
  * factory for storage, depending on type
  * @param {StorageOptionsType} type
- * @param {StorageMemoryOptions|StorageRedisOptions} options
+ * @param {StorageMemoryOptions|StorageRedisOptions|StorageCustomOptions} options
  * @returns {StorageMemory|StorageRedis}
  */
 function createStorage (type, options) {
@@ -39,6 +45,19 @@ function createStorage (type, options) {
   if (type === StorageOptionsType.redis) {
     return new StorageRedis(options)
   }
+
+  if (type === 'custom') {
+    if (!options.storage) {
+      throw new Error('Storage is required for custom storage type')
+    }
+
+    if (!validateCustomStorage(options.storage)) {
+      throw new Error('Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.')
+    }
+
+    return options.storage
+  }
+
   return new StorageMemory(options)
 }
 
