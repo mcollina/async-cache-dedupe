@@ -34,6 +34,11 @@ class StorageInterface {
    * @param {string} key
    */
   async getTTL (key) { throw new Error('storage getTTL method not implemented') }
+  /**
+   * @param {string} key
+   * @returns {boolean} true if key exists, false otherwise
+   */
+  async exists (key) { throw new Error('storage exists method not implemented') }
 }
 
 module.exports = StorageInterface

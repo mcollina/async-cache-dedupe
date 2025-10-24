@@ -66,6 +66,33 @@ describe('storage memory', async () => {
     })
   })
 
+  describe('exists', async () => {
+    test('should get true by a key previously stored', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 100)
+
+      assert.equal(storage.exists('foo'), true)
+    })
+
+    test('should get false retrieving a non stored key', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 100)
+
+      assert.equal(storage.exists('no-foo'), false)
+    })
+
+    test('should get false retrieving an expired value', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 1)
+      await sleep(2000)
+
+      assert.equal(storage.exists('foo'), false)
+    })
+  })
+
   describe('getTTL', async () => {
     test('should get the TTL of a previously key stored', async () => {
       const storage = createStorage('memory')

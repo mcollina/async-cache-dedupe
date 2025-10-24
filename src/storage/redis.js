@@ -72,6 +72,32 @@ class StorageRedis extends StorageInterface {
   }
 
   /**
+   * @param {string} key
+   * @returns {boolean} true if key exists, false otherwise
+   */
+  async exists (key) {
+    this.log.debug({ msg: 'acd/storage/redis.exists', key })
+
+    try {
+      const count = await this.store.exists(key)
+      if (count < 1) {
+        if (!this.invalidation) {
+          return false
+        }
+
+        // clear references because the key could be expired (or evicted)
+        // note: no await
+        this.clearReferences(key)
+        return false
+      }
+      return true
+    } catch (err) {
+      this.log.error({ msg: 'acd/storage/redis.exists error', err, key })
+      return false
+    }
+  }
+
+  /**
    * retrieve the remaining TTL value by key
    * @param {string} key
    * @returns {undefined|*} undefined if key not found or expired

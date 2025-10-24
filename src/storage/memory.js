@@ -71,6 +71,32 @@ class StorageMemory extends StorageInterface {
   }
 
   /**
+   * check if a key exists
+   * @param {string} key
+   * @returns {boolean} true if key exists, false otherwise
+   */
+  exists (key) {
+    this.log.debug({ msg: 'acd/storage/memory.exists', key })
+
+    // use get method and not has, to check expiration
+    const entry = this.store.get(key)
+    if (entry) {
+      this.log.debug({ msg: 'acd/storage/memory.exists, entry', entry, now: now() })
+      if (entry.start + entry.ttl > now()) {
+        this.log.debug({ msg: 'acd/storage/memory.exists, key is NOT expired', key, entry })
+        return true
+      }
+      this.log.debug({ msg: 'acd/storage/memory.exists, key is EXPIRED', key, entry })
+
+      // no need to wait for key to be removed
+
+      setImmediate(() => this.remove(key))
+      return false
+    }
+    return false
+  }
+
+  /**
    * retrieve the remaining TTL value by key
    * @param {string} key
    * @returns {undefined|*} undefined if key not found or expired

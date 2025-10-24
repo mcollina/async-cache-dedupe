@@ -159,6 +159,16 @@ class Cache {
     return this[kValues][name].get(key)
   }
 
+  async exists (name, key) {
+    if (!this[kValues][name]) {
+      throw new Error(`${name} is not defined in the cache`)
+    }
+
+    // TODO validate key?
+
+    return this[kValues][name].exists(key)
+  }
+
   async set (name, key, value, ttl, references) {
     if (!this[kValues][name]) {
       throw new Error(`${name} is not defined in the cache`)
@@ -349,6 +359,10 @@ class Wrapper {
       return await this.transformer.deserialize(data)
     }
     return data
+  }
+
+  async exists (key) {
+    return await this.storage.exists(key)
   }
 
   async set (key, value, ttl, references) {
