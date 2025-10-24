@@ -180,7 +180,7 @@ describe('storage redis', async () => {
       equal(await storage.exists('foo'), false)
     })
 
-    test('should clear references when key does not exist and invalidation is enabled', { timeout: 5000 }, async (t) => {
+    test('should clear references when key does not exist and invalidation is enabled', async (t) => {
       const storage = createStorage('redis', { client: redisClient, invalidation: true })
 
       // Spy on clearReferences to capture calls AND the promise
@@ -204,7 +204,7 @@ describe('storage redis', async () => {
       assert.equal(clearReferencesCalled, true, 'clearReferences should have been called')
       assert.ok(clearReferencesPromise, 'clearReferencesPromise should be set')
 
-      await clearReferencesPromise // if the test timeout, it may be due to this line, because the promise was never resolved
+      await clearReferencesPromise
 
       assert.equal((await storage.store.smembers('r:fooers')).length, 0)
       assert.equal((await storage.store.smembers('k:foo')).length, 0)
