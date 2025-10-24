@@ -142,7 +142,7 @@ function abstractLogging () {
 }
 
 function validateCustomStorage (storage) {
-  const methods = ['get', 'set', 'invalidate', 'remove', 'clear', 'getTTL']
+  const methods = ['get', 'set', 'invalidate', 'remove', 'clear', 'getTTL', 'exists']
   return methods.every((method) => typeof storage[method] === 'function')
 }
 

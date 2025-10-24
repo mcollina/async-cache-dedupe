@@ -52,7 +52,7 @@ function createStorage (type, options) {
     }
 
     if (!validateCustomStorage(options.storage)) {
-      throw new Error('Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.')
+      throw new Error('Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, getTTL, and exists.')
     }
 
     return options.storage

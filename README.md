@@ -334,7 +334,8 @@ class CustomStorage extends StorageInterface {
   async invalidate (references) { } // Invalidate all entries with given references
   async clear () { } // Clear entire cache
   async refresh () { } // Used internally for TTL refresh logic
-  async getTTL (key) { // Return TTL for a key}
+  async getTTL (key) { } // Return TTL for a key
+  async exists (key) { } // Check if a key exists
 }
 
 const { createStorage, Cache } = require('async-cache-dedupe')
