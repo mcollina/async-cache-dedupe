@@ -163,9 +163,6 @@ class Cache {
     if (!this[kValues][name]) {
       throw new Error(`${name} is not defined in the cache`)
     }
-
-    // TODO validate key?
-
     return this[kValues][name].exists(key)
   }
 

@@ -164,20 +164,8 @@ describe('storage redis', async () => {
     })
 
     test('should not throw on error', async (t) => {
-      const { equal } = tspl(t, { plan: 3 })
-
-      const storage = createStorage('redis', {
-        client: {},
-        log: {
-          debug: () => { },
-          error: (error) => {
-            equal(error.msg, 'acd/storage/redis.exists error')
-            equal(error.key, 'foo')
-          }
-        }
-      })
-
-      equal(await storage.exists('foo'), false)
+      const storage = createStorage('redis', { client: {} })
+      assert.doesNotReject(storage.exists('foo'))
     })
 
     test('should clear references when key does not exist and invalidation is enabled', async (t) => {

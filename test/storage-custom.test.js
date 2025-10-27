@@ -63,7 +63,7 @@ describe('storage custom', async () => {
     }
 
     requiredMethods.forEach(missingMethod => {
-      test(`missing ${missingMethod}`, () => {
+      test(`should throw error for missing required method ${missingMethod}`, () => {
         const storage = createStorageWithoutMethod(missingMethod)
         assert.throws(() => createStorage('custom', { storage }), { message: expectedError })
       })
