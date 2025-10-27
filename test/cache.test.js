@@ -71,6 +71,32 @@ describe('Cache', async (t) => {
     })
   })
 
+  describe('exists', async () => {
+    test('should use storage to check if a value exists', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: {
+          async exists (key) {
+            equal(key, 'foo')
+          }
+        }
+      })
+      cache.define('f', () => 'the-value')
+
+      await cache.exists('f', 'foo')
+    })
+
+    test('should get an error trying to use exists of not defined name', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({ storage: createStorage() })
+      cache.define('f', () => 'the-value')
+
+      cache.exists('fiiii', 'key').catch((err) => {
+        equal(err.message, 'fiiii is not defined in the cache')
+      })
+    })
+  })
+
   test('should bypass setting value in storage if ttl function returns 0', async (t) => {
     const { equal, fail } = tspl(t, { plan: 1 })
 

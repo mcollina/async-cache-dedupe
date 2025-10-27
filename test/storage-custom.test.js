@@ -16,6 +16,7 @@ describe('storage custom', async () => {
       async clear () { }
       async refresh () { }
       async getTTL () { }
+      async exists (key) { }
     }
     const storage = createStorage('custom', { storage: new CustomStorage() })
 
@@ -25,6 +26,7 @@ describe('storage custom', async () => {
     assert.ok(typeof storage.invalidate === 'function')
     assert.ok(typeof storage.refresh === 'function')
     assert.ok(typeof storage.getTTL === 'function')
+    assert.ok(typeof storage.exists === 'function')
   })
 
   test('should throw if storage not defined', async (t) => {
@@ -37,22 +39,34 @@ describe('storage custom', async () => {
     class CustomStorage {}
 
     assert.throws(() => createStorage('custom', { storage: new CustomStorage() }), {
-      message: 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.'
+      message: 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, getTTL, and exists.'
     })
   })
 
-  test('should throw error for missing getTTL', async () => {
-    class CustomStorage {
-      async get (key) { }
-      async set (key, value, ttl, references) { }
-      async remove (key) { }
-      async invalidate (references) { }
-      async clear () { }
-      async refresh () { }
+  describe('should throw error for missing required methods', () => {
+    const requiredMethods = ['get', 'set', 'invalidate', 'remove', 'clear', 'getTTL', 'exists']
+    const expectedError = 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, getTTL, and exists.'
+
+    const createStorageWithoutMethod = (missingMethod) => {
+      class CustomStorage {
+        async get (key) { }
+        async set (key, value, ttl, references) { }
+        async remove (key) { }
+        async invalidate (references) { }
+        async clear () { }
+        async refresh () { }
+        async getTTL () { }
+        async exists (key) { }
+      }
+      delete CustomStorage.prototype[missingMethod]
+      return new CustomStorage()
     }
 
-    assert.throws(() => createStorage('custom', { storage: new CustomStorage() }), {
-      message: 'Custom storage is invalid. It must define all required methods: get, set, invalidate, remove, clear, and getTTL.'
+    requiredMethods.forEach(missingMethod => {
+      test(`should throw error for missing required method ${missingMethod}`, () => {
+        const storage = createStorageWithoutMethod(missingMethod)
+        assert.throws(() => createStorage('custom', { storage }), { message: expectedError })
+      })
     })
   })
 

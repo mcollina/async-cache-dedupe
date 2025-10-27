@@ -101,6 +101,102 @@ describe('storage redis', async () => {
 
       equal(await storage.get('foo'), undefined)
     })
+
+    test('should clear references when key does not exist and invalidation is enabled', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+
+      // Spy on clearReferences to capture calls AND the promise
+      let clearReferencesPromise = Promise.resolve() // initialized this way because using null causes lint warning
+      let clearReferencesCalled = false
+      const originalClearReferences = storage.clearReferences.bind(storage)
+
+      storage.clearReferences = function (key) {
+        clearReferencesCalled = true
+        clearReferencesPromise = null
+        clearReferencesPromise = originalClearReferences(key)
+        return clearReferencesPromise
+      }
+
+      await storage.set('foo', 'bar', 10, ['fooers'])
+      await storage.store.del('foo') // Simulate expiration
+      assert.equal((await storage.store.smembers('r:fooers')).length, 1)
+      assert.equal((await storage.store.smembers('k:foo')).length, 1)
+
+      assert.equal(await storage.get('foo'), undefined)
+      assert.equal(clearReferencesCalled, true, 'clearReferences should have been called')
+      assert.ok(clearReferencesPromise, 'clearReferencesPromise should be set')
+
+      await clearReferencesPromise
+
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('k:foo')).length, 0)
+    })
+  })
+
+  describe('exists', async () => {
+    beforeEach(async () => {
+      await redisClient.flushall()
+    })
+
+    test('should get true by a key previously stored', async (t) => {
+      const storage = createStorage('redis', { client: redisClient })
+
+      await storage.set('foo', 'bar', 100)
+
+      assert.equal(await storage.exists('foo'), true)
+    })
+
+    test('should get false retrieving a non stored key', async (t) => {
+      const storage = createStorage('redis', { client: redisClient })
+
+      await storage.set('foo', 'bar', 100)
+
+      assert.equal(await storage.exists('no-foo'), false)
+    })
+
+    test('should get false retrieving an expired value', async (t) => {
+      const storage = createStorage('redis', { client: redisClient })
+
+      await storage.set('foo', 'bar', 1)
+      await sleep(2000)
+
+      assert.equal(await storage.exists('foo'), false)
+    })
+
+    test('should not throw on error', async (t) => {
+      const storage = createStorage('redis', { client: {} })
+      assert.doesNotReject(storage.exists('foo'))
+    })
+
+    test('should clear references when key does not exist and invalidation is enabled', async (t) => {
+      const storage = createStorage('redis', { client: redisClient, invalidation: true })
+
+      // Spy on clearReferences to capture calls AND the promise
+      let clearReferencesPromise = Promise.resolve() // initialized this way because using null causes lint warning
+      let clearReferencesCalled = false
+      const originalClearReferences = storage.clearReferences.bind(storage)
+
+      storage.clearReferences = function (key) {
+        clearReferencesCalled = true
+        clearReferencesPromise = null
+        clearReferencesPromise = originalClearReferences(key)
+        return clearReferencesPromise
+      }
+
+      await storage.set('foo', 'bar', 10, ['fooers'])
+      await storage.store.del('foo') // Simulate expiration
+      assert.equal((await storage.store.smembers('r:fooers')).length, 1)
+      assert.equal((await storage.store.smembers('k:foo')).length, 1)
+
+      assert.equal(await storage.exists('foo'), false)
+      assert.equal(clearReferencesCalled, true, 'clearReferences should have been called')
+      assert.ok(clearReferencesPromise, 'clearReferencesPromise should be set')
+
+      await clearReferencesPromise
+
+      assert.equal((await storage.store.smembers('r:fooers')).length, 0)
+      assert.equal((await storage.store.smembers('k:foo')).length, 0)
+    })
   })
 
   describe('set', async () => {

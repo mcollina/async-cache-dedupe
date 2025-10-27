@@ -15,6 +15,7 @@ describe('storage', async (t) => {
     assert.ok(typeof storage.invalidate === 'function')
     assert.ok(typeof storage.refresh === 'function')
     assert.ok(typeof storage.getTTL === 'function')
+    assert.ok(typeof storage.exists === 'function')
   })
 
   test('should get an error implementing storage interfaces without get method', async (t) => {
@@ -22,7 +23,7 @@ describe('storage', async (t) => {
 
     const badStorage = new BadStorage()
 
-    for (const method of ['get', 'set', 'remove', 'invalidate', 'clear', 'refresh', 'getTTL']) {
+    for (const method of ['get', 'set', 'remove', 'invalidate', 'clear', 'refresh', 'getTTL', 'exists']) {
       try {
         await badStorage[method]()
         assert.fail(`should throw an error on method ${method}`)
