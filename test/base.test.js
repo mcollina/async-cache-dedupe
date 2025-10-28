@@ -629,4 +629,157 @@ describe('base', async () => {
 
     await cache.serializeWithError(1)
   })
+
+  describe('stale deduplication', async () => {
+    test('should deduplicate concurrent requests during stale period with same key', async (t) => {
+      const { equal } = tspl(t, { plan: 5 })
+      let callCount = 0
+
+      const cache = new Cache({
+        storage: createStorage(),
+        ttl: 1, // 1 second cache
+        stale: 3  // 3 seconds stale period (expires after 4 seconds total)
+      })
+
+      const backgroundPromises = []
+      const slowFunction = async (args) => {
+        callCount++
+        // Simulate a slow function and track the promise for background calls
+        const promise = new Promise(resolve => setTimeout(resolve, 100)).then(() => {
+          return `result-${args.id}-${callCount}`
+        })
+
+        // Track promises from background calls (during stale period)
+        if (callCount > 1) {
+          backgroundPromises.push(promise)
+        }
+
+        return promise
+      }
+
+      cache.define('test', slowFunction)
+
+      // First call - puts value in cache
+      const result1 = await cache.test({ id: 'test' })
+      equal(callCount, 1, 'First call executes the function')
+      equal(result1, 'result-test-1')
+
+      // Wait 1.1 seconds to be in stale period (remainingTTL <= 3)
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      // First stale call - returns immediately with stale data, triggers background refresh
+      const staleResult1 = await cache.test({ id: 'test' })
+
+      // Second stale call - returns immediately with stale data, should reuse background refresh
+      const staleResult2 = await cache.test({ id: 'test' })
+
+      equal(staleResult1, 'result-test-1', 'First stale call returns cached value')
+      equal(staleResult2, 'result-test-1', 'Second stale call returns cached value')
+
+      // Wait for all background refresh calls to complete
+      await Promise.all(backgroundPromises)
+
+      equal(backgroundPromises.length, 1, 'Function should only be called once in background (deduplication)')
+    })
+
+    test('should NOT deduplicate concurrent requests during stale period with different keys', async (t) => {
+      const { equal } = tspl(t, { plan: 6 })
+      let callCount = 0
+
+      const cache = new Cache({
+        storage: createStorage(),
+        ttl: 1, // 1 second cache
+        stale: 3  // 3 seconds stale period (expires after 4 seconds total)
+      })
+
+      const backgroundPromises = []
+      const slowFunction = async (args) => {
+        callCount++
+        // Simulate a slow function and track the promise for background calls
+        const promise = new Promise(resolve => setTimeout(resolve, 100)).then(() => {
+          return `result-${args.id}-${callCount}`
+        })
+
+        // Track promises from background calls (during stale period)
+        if (callCount > 2) {
+          backgroundPromises.push(promise)
+        }
+
+        return promise
+      }
+
+      cache.define('test', slowFunction)
+
+      // First calls - put values in cache for different keys
+      const result1 = await cache.test({ id: 'key1' })
+      const result2 = await cache.test({ id: 'key2' })
+      equal(callCount, 2, 'First calls execute the function for each key')
+      equal(result1, 'result-key1-1')
+      equal(result2, 'result-key2-2')
+
+      // Wait for values to become stale (but not expired)
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      // Stale calls with different keys - each should trigger its own background refresh
+      const staleResult1 = await cache.test({ id: 'key1' })
+      const staleResult2 = await cache.test({ id: 'key2' })
+
+      equal(staleResult1, 'result-key1-1', 'First stale call returns cached value for key1')
+      equal(staleResult2, 'result-key2-2', 'Second stale call returns cached value for key2')
+
+      // Wait for all background refresh calls to complete
+      await Promise.all(backgroundPromises)
+
+      equal(backgroundPromises.length, 2, 'Function should be called twice in background (one per different key)')
+    })
+
+    test('should remove key from staleDedupes when background refresh throws exception', async (t) => {
+      const { equal, ok } = tspl(t, { plan: 3 })
+
+      const cache = new Cache({
+        storage: createStorage(),
+        ttl: 1, // 1 second cache
+        stale: 3  // 3 seconds stale period (expires after 4 seconds total)
+      })
+
+      // Function that succeeds first time, throws on subsequent calls
+      let callCount = 0
+      const backgroundPromises = []
+
+      const slowFunction = async (args) => {
+        callCount++
+
+        if (callCount === 1) {
+          return `result-${args.id}`
+        }
+
+        const promise = new Promise((_resolve, reject) => {
+          setTimeout(() => reject(new Error('Background refresh failed')), 10)
+        })
+        backgroundPromises.push(promise)
+        return promise
+      }
+
+      cache.define('test', slowFunction)
+
+      // Put data in cache
+      const result1 = await cache.test({ id: 'test' })
+      equal(result1, 'result-test')
+
+      // Wait for stale state
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      // Make stale request that will trigger background refresh exception
+      const staleResult = await cache.test({ id: 'test' })
+      equal(staleResult, 'result-test', 'Returns stale value despite background exception')
+
+      // Wait for background refresh to start and complete (with errors handled)
+      await Promise.allSettled(backgroundPromises)
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      // Verify staleDedupes is empty by accessing the wrapper directly
+      const wrapper = cache[kValues].test
+      ok(wrapper.staleDedupes.size === 0, 'staleDedupes should be empty after exception')
+    })
+  })
 })
