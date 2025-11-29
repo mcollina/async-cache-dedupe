@@ -5,11 +5,10 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "eslint && c8 --100 node --test test/*test.js && tsd",
+    "test": "eslint && borp --coverage --check-coverage --expose-gc test/*test.js && tsd",
     "test:types": "tsd",
     "test:browser": "node test/browser/helpers/runner-browser.mjs",
-    "lint:fix": "eslint --fix",
-    "redis": "docker run --rm -p 6379:6379 redis redis-server"
+    "lint:fix": "eslint --fix"
   },
   "repository": {
     "type": "git",
@@ -36,9 +35,9 @@
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-inject": "^5.0.5",
     "@rollup/plugin-node-resolve": "^16.0.3",
+    "borp": "^0.21.0",
     "browserify": "^17.0.1",
     "buffer": "^6.0.3",
-    "c8": "^10.1.3",
     "esbuild": "^0.27.0",
     "esbuild-plugin-alias": "^0.2.1",
     "eslint": "^9.39.1",
