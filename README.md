@@ -422,6 +422,39 @@ You can also use the module with a bundler. The supported bundlers are `webpack`
 
 ---
 
+## Contributing
+
+Contributions are welcome! To run the project locally for testing:
+
+### Local Development Setup
+
+1. **Start Redis for testing**: The project includes a Docker Compose configuration for running Redis locally:
+   ```bash
+   cd utils
+   docker compose up -d
+   ```
+   This will start a Redis instance on port 6379, which is used by the test suite.
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Run tests**:
+   ```bash
+   npm test
+   ```
+
+4. **Stop Redis when done**:
+   ```bash
+   cd utils
+   docker compose down
+   ```
+
+Tests require 100% coverage to pass.
+
+---
+
 ## Maintainers
 
 * [__Matteo Collina__](https://github.com/mcollina), <https://twitter.com/matteocollina>, <https://www.npmjs.com/~matteo.collina>
