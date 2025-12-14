@@ -11,9 +11,11 @@ const storageOptions: StorageMemoryOptions = {
 
 const cache = createCache();
 expectType<Cache>(cache);
+expectType<Promise<boolean>>(cache.exists("fetchSomething", "key"));
 
 const storage = createStorage("memory", storageOptions);
 expectType<StorageInterface>(storage);
+expectType<Promise<boolean>>(storage.exists("key"));
 
 const memoryCache = createCache({
   storage: {

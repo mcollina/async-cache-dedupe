@@ -72,6 +72,7 @@ export declare class StorageInterface {
   clear(name: string): Promise<void>;
   refresh(): Promise<void>;
   getTTL(key: string): Promise<void>;
+  exists(key: string): Promise<boolean>;
 }
 
 export declare function createCache(
@@ -118,6 +119,8 @@ export declare class Cache {
   clear(name: string, value: any): Promise<void>;
 
   get(name: string, key: string): Promise<any>;
+
+  exists(name: string, key: string): Promise<boolean>;
 
   set(
     name: string,
