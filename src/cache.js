@@ -210,6 +210,7 @@ class Wrapper {
    */
   constructor (func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale) {
     this.dedupes = new Map()
+    this.staleDedupes = new Set()
     this.func = func
     this.name = name
     this.serialize = serialize
@@ -270,8 +271,11 @@ class Wrapper {
         const stale = typeof this.stale === 'function' ? this.stale(data) : this.stale
         if (stale > 0) {
           const remainingTTL = await this.storage.getTTL(storageKey)
-          if (remainingTTL <= stale) {
-            this._wrapFunction(storageKey, args, key).catch(noop)
+          if (remainingTTL <= stale && !this.staleDedupes.has(key)) {
+            this.staleDedupes.add(key)
+            this._wrapFunction(storageKey, args, key).catch(noop).finally(() => {
+              this.staleDedupes.delete(key)
+            })
           }
         }
         return data
@@ -343,11 +347,13 @@ class Wrapper {
     if (value) {
       const key = this.getKey(value)
       this.dedupes.delete(key)
+      this.staleDedupes.delete(key)
       await this.storage.remove(this.getStorageKey(key))
       return
     }
     await this.storage.clear(this.getStorageName())
     this.dedupes.clear()
+    this.staleDedupes.clear()
   }
 
   async get (key) {
