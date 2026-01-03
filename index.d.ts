@@ -1,4 +1,30 @@
-import { Redis } from "ioredis";
+/**
+ * Minimal interface for a Redis-compatible client.
+ * This allows any Redis client implementation (ioredis, node-redis, etc.) to be used
+ * without requiring ioredis to be installed for TypeScript compilation.
+ */
+export interface RedisCompatibleClient {
+  get(key: string): Promise<string | null>;
+  exists(key: string): Promise<number>;
+  pttl(key: string): Promise<number>;
+  set(key: string, value: string, ...args: any[]): Promise<string>;
+  smembers(key: string): Promise<string[]>;
+  sadd(key: string, ...members: any[]): Promise<number>;
+  srem(key: string, ...members: any[]): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+  del(...keys: string[]): Promise<number>;
+  keys(pattern: string): Promise<string[]>;
+  flushall(): Promise<string>;
+  pipeline(commands?: any[][]): RedisPipeline;
+  scan(cursor: number, ...args: any[]): Promise<[string, string[]]>;
+}
+
+/**
+ * Interface for Redis pipeline operations.
+ */
+export interface RedisPipeline {
+  exec(): Promise<Array<[Error | null, any]>>;
+}
 
 export type StorageOptionsType = "redis" | "memory" | "custom";
 
@@ -20,7 +46,7 @@ interface Logger {
   error: (input: LoggerInput) => void;
 }
 export interface StorageRedisOptions {
-  client: Redis;
+  client: RedisCompatibleClient;
   log?: Logger;
   invalidation?: { referencesTTL: number } | boolean;
 }

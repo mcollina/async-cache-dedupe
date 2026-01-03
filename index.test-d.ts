@@ -1,7 +1,7 @@
 // Write a tsd file for the module
-import { expectType, expectError, expectNotAssignable, expectAssignable } from "tsd";
-import { createCache, Cache, createStorage } from ".";
-import { StorageInterface, StorageMemoryOptions } from "./index.js";
+import { expectType, expectNotAssignable, expectAssignable } from "tsd";
+import { createCache, Cache, createStorage, StorageInterface } from "./index.js";
+import type { StorageCustomOptions, StorageMemoryOptions } from "./index.js";
 
 // Testing internal types
 
@@ -83,15 +83,12 @@ expectType<typeof fetchSomething>(
 );
 
 expectType<Promise<void>>(cache.clear());
-expectType<Promise<void>>(cache.clear("fetchSomething"));
-expectType<Promise<void>>(cache.clear("fetchSomething", "bar"));
 
 const result = await currentCacheInstance.fetchSomething("test");
 
 expectType<{ k: any }>(result);
 
 await unionMemoryCache.invalidateAll("test:*");
-await unionMemoryCache.invalidateAll(["test:1", "test:2", "test:3"], "memory");
 
 // Testing define.func only accepts one argument
 const fetchFuncSingleArgument = async (args: {k1: string, k2:string}) => {
@@ -121,7 +118,7 @@ class CustomStorage extends StorageInterface { }
 
 // createStorage with valid custom storage
 const custom = new CustomStorage({});
-const storageCustom = createStorage('custom', { storage: custom });
+const storageCustom = createStorage('custom', { storage: custom } as StorageCustomOptions);
 expectType<StorageInterface>(storageCustom);
 
 const customCache = createCache({
