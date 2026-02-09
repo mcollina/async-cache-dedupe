@@ -40,7 +40,7 @@
     "buffer": "^6.0.3",
     "esbuild": "^0.27.2",
     "esbuild-plugin-alias": "^0.2.1",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "events": "^3.3.0",
     "ioredis": "^5.8.2",
     "neostandard": "^0.12.2",
