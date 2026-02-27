@@ -26,14 +26,14 @@ export interface RedisPipeline {
   exec(): Promise<Array<[Error | null, any]>>;
 }
 
-export type StorageOptionsType = "redis" | "memory" | "custom";
+export type StorageOptionsType = 'redis' | 'memory' | 'custom'
 
 export type StorageOptions = {
   type: StorageOptionsType,
   options: StorageRedisOptions | StorageMemoryOptions,
 }
 
-type References = string | string[];
+type References = string | string[]
 
 interface LoggerInput {
   msg: string;
@@ -71,53 +71,53 @@ type Events = {
   onError?: (err: any) => void;
   onHit?: (key: string) => void;
   onMiss?: (key: string) => void;
-};
+}
 
 export type StorageInputRedis = {
-  type: "redis";
+  type: 'redis';
   options?: StorageRedisOptions;
-};
+}
 
 export type StorageInputMemory = {
-  type: "memory";
+  type: 'memory';
   options?: StorageMemoryOptions;
-};
+}
 
 export type StorageInputCustom = {
-  type: "custom";
+  type: 'custom';
   options?: StorageCustomOptions;
 }
 
 export declare class StorageInterface {
-  constructor(options: any);
+  constructor (options: any)
 
-  get(key: string): Promise<undefined | any>;
-  set(key: string, value: any, ttl: number, references?: References): Promise<void>;
-  remove(key: string): Promise<void>;
-  invalidate(references: References): Promise<void>;
-  clear(name: string): Promise<void>;
-  refresh(): Promise<void>;
-  getTTL(key: string): Promise<void>;
-  exists(key: string): Promise<boolean>;
+  get (key: string): Promise<undefined | any>
+  set (key: string, value: any, ttl: number, references?: References): Promise<void>
+  remove (key: string): Promise<void>
+  invalidate (references: References): Promise<void>
+  clear (name: string): Promise<void>
+  refresh (): Promise<void>
+  getTTL (key: string): Promise<void>
+  exists (key: string): Promise<boolean>
 }
 
-export declare function createCache(
+export declare function createCache (
   options?: {
     storage?: StorageInputRedis | StorageInputMemory | StorageInputCustom;
     ttl?: number | ((result: unknown) => number);
     transformer?: DataTransformer;
     stale?: number | ((result: unknown) => number);
   } & Events,
-): Cache;
+): Cache
 
 export declare class Cache {
-  constructor(
+  constructor (
     options: {
       ttl: number | ((result: unknown) => number);
       stale?: number | ((result: unknown) => number);
       storage: StorageInterface;
     } & Events
-  );
+  )
 
   define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
@@ -134,41 +134,40 @@ export declare class Cache {
       ) => References | Promise<References>;
     } & Events,
     func?: T
-  ): S & { [n in N]: T };
+  ): S & { [n in N]: T }
   define<T extends (args: any) => any, N extends string, S extends this>(
     name: N,
     opts: T
-  ): S & { [n in N]: T };
+  ): S & { [n in N]: T }
 
-  clear(): Promise<void>;
-  clear(name: string): Promise<void>;
-  clear(name: string, value: any): Promise<void>;
+  clear (): Promise<void>
+  clear (name: string): Promise<void>
+  clear (name: string, value: any): Promise<void>
 
-  get(name: string, key: string): Promise<any>;
+  get (name: string, key: string): Promise<any>
 
-  exists(name: string, key: string): Promise<boolean>;
+  exists (name: string, key: string): Promise<boolean>
 
-  set(
+  set (
     name: string,
     key: string,
     value: any,
     ttl: number,
     references?: References
-  ): Promise<void>;
+  ): Promise<void>
 
-  invalidate(name: string, references: References): Promise<void>;
+  invalidate (name: string, references: References): Promise<void>
 
-  invalidateAll(
+  invalidateAll (
     references: References,
     storage?: StorageOptionsType
-  ): Promise<void>;
+  ): Promise<void>
 }
 
-export declare function createStorage(type: "redis", options: StorageRedisOptions): StorageInterface;
-export declare function createStorage(type: "memory", options: StorageMemoryOptions): StorageInterface;
-export declare function createStorage(type: "custom", options: StorageCustomOptions): StorageInterface;
-export declare function createStorage(
+export declare function createStorage (type: 'redis', options: StorageRedisOptions): StorageInterface
+export declare function createStorage (type: 'memory', options: StorageMemoryOptions): StorageInterface
+export declare function createStorage (type: 'custom', options: StorageCustomOptions): StorageInterface
+export declare function createStorage (
   type: StorageOptionsType,
   options: StorageRedisOptions | StorageMemoryOptions,
-): StorageInterface;
-
+): StorageInterface
