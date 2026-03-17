@@ -57,7 +57,7 @@
     "tsd": "^0.33.0",
     "vite": "^7.3.0",
     "webpack": "^5.104.1",
-    "webpack-cli": "^6.0.1",
+    "webpack-cli": "^7.0.2",
     "wrangler": "^4.54.0"
   },
   "dependencies": {
