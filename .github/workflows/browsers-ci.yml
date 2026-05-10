@@ -12,6 +12,7 @@ on:
 
 jobs:
   build:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -26,15 +27,15 @@ jobs:
           - os: windows-latest
             browser: safari
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Restore cached playwright dependency
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: playwright-cache
         with:
           path: | # playwright installs browsers into .local-browsers
@@ -44,7 +45,7 @@ jobs:
           key: ${{ matrix.os }}-playwright-${{ hashFiles('package.json') }}
 
       - name: Restore cached dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: node-modules-${{ matrix.os }}-${{ hashFiles('package.json') }}
