@@ -81,12 +81,10 @@ expect(currentCacheInstance.fetchSomethingElseWithCustomStorage).type.toBe<typeo
 
 expect(cache.clear()).type.toBe<Promise<void>>()
 
-;(async () => {
-  const result = await currentCacheInstance.fetchSomething('test')
-  expect(result).type.toBe<{ k: any }>()
+const result = await currentCacheInstance.fetchSomething('test')
+expect(result).type.toBe<{ k: any }>()
 
-  await unionMemoryCache.invalidateAll('test:*')
-})()
+await unionMemoryCache.invalidateAll('test:*')
 
 // Testing define.func only accepts one argument
 const fetchFuncSingleArgument = async (args: { k1: string, k2: string }) => {
