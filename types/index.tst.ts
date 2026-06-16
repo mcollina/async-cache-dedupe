@@ -81,10 +81,8 @@ expect(currentCacheInstance.fetchSomethingElseWithCustomStorage).type.toBe<typeo
 
 expect(cache.clear()).type.toBe<Promise<void>>()
 
-const result = await currentCacheInstance.fetchSomething('test')
-expect(result).type.toBe<{ k: any }>()
-
-await unionMemoryCache.invalidateAll('test:*')
+expect(currentCacheInstance.fetchSomething('test')).type.toBe<Promise<{ k: any }>>()
+expect(unionMemoryCache.invalidateAll('test:*')).type.toBe<Promise<void>>()
 
 // Testing define.func only accepts one argument
 const fetchFuncSingleArgument = async (args: { k1: string, k2: string }) => {
@@ -97,10 +95,8 @@ const fetchFuncMultipleArguments = async (k1: string, k2:string) => {
   return { k1, k2 }
 }
 
-const singleArgTuple: [string, typeof fetchFuncSingleArgument] = ['fetchFuncSingleArgument', fetchFuncSingleArgument]
-const multipleArgTuple: [string, typeof fetchFuncMultipleArguments] = ['fetchFuncMultipleArguments', fetchFuncMultipleArguments]
-expect(singleArgTuple).type.toBeAssignableTo<Parameters<typeof unionMemoryCache.define>>()
-expect(multipleArgTuple).type.not.toBeAssignableTo<Parameters<typeof unionMemoryCache.define>>()
+expect(unionMemoryCache.define).type.toBeCallableWith('fetchFuncSingleArgument', fetchFuncSingleArgument)
+expect(unionMemoryCache.define).type.not.toBeCallableWith('fetchFuncMultipleArguments', fetchFuncMultipleArguments)
 
 // Testing define.opts.references
 memoryCache.define('fetchFuncSingleArgument', {
