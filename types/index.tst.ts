@@ -1,5 +1,4 @@
-// Write a tsd file for the module
-import { expectType, expectNotAssignable, expectAssignable } from 'tsd'
+import { expect } from 'tstyche'
 import { createCache, Cache, createStorage, StorageInterface } from './index.js'
 import type { StorageCustomOptions, StorageMemoryOptions } from './index.js'
 
@@ -10,12 +9,12 @@ const storageOptions: StorageMemoryOptions = {
 }
 
 const cache = createCache()
-expectType<Cache>(cache)
-expectType<Promise<boolean>>(cache.exists('fetchSomething', 'key'))
+expect(cache).type.toBe<Cache>()
+expect(cache.exists('fetchSomething', 'key')).type.toBe<Promise<boolean>>()
 
 const storage = createStorage('memory', storageOptions)
-expectType<StorageInterface>(storage)
-expectType<Promise<boolean>>(storage.exists('key'))
+expect(storage).type.toBe<StorageInterface>()
+expect(storage.exists('key')).type.toBe<Promise<boolean>>()
 
 const memoryCache = createCache({
   storage: {
@@ -23,20 +22,20 @@ const memoryCache = createCache({
     options: storageOptions,
   },
 })
-expectType<Cache>(memoryCache)
+expect(memoryCache).type.toBe<Cache>()
 
 const cacheWithTtlAndStale = createCache({
   ttl: 1000,
   stale: 1000,
 })
-expectType<Cache>(cacheWithTtlAndStale)
+expect(cacheWithTtlAndStale).type.toBe<Cache>()
 
 const cacheClass = new Cache({
   ttl: 1000,
   stale: 1000,
   storage: createStorage('memory', {})
 })
-expectType<Cache>(cacheClass)
+expect(cacheClass).type.toBe<Cache>()
 
 // Testing Union Types
 
@@ -57,7 +56,7 @@ const unionMemoryCache = createCache({
     options: storageOptions,
   },
 })
-expectType<Cache>(unionMemoryCache)
+expect(unionMemoryCache).type.toBe<Cache>()
 const currentCacheInstance = unionMemoryCache
   .define('fetchSomething', fetchSomething)
   .define(
@@ -75,22 +74,15 @@ const currentCacheInstance = unionMemoryCache
     { storage: { type: 'memory', options: { size: 10 } }, stale: 1000 },
     fetchSomething
   )
-expectType<typeof fetchSomething>(currentCacheInstance.fetchSomething)
-expectType<typeof fetchSomething>(currentCacheInstance.fetchSomethingElse)
-expectType<typeof fetchSomething>(
-  currentCacheInstance.fetchSomethingElseWithTtlFunction
-)
-expectType<typeof fetchSomething>(
-  currentCacheInstance.fetchSomethingElseWithCustomStorage
-)
+expect(currentCacheInstance.fetchSomething).type.toBe<typeof fetchSomething>()
+expect(currentCacheInstance.fetchSomethingElse).type.toBe<typeof fetchSomething>()
+expect(currentCacheInstance.fetchSomethingElseWithTtlFunction).type.toBe<typeof fetchSomething>()
+expect(currentCacheInstance.fetchSomethingElseWithCustomStorage).type.toBe<typeof fetchSomething>()
 
-expectType<Promise<void>>(cache.clear())
+expect(cache.clear()).type.toBe<Promise<void>>()
 
-const result = await currentCacheInstance.fetchSomething('test')
-
-expectType<{ k: any }>(result)
-
-await unionMemoryCache.invalidateAll('test:*')
+expect(currentCacheInstance.fetchSomething('test')).type.toBe<Promise<{ k: any }>>()
+expect(unionMemoryCache.invalidateAll('test:*')).type.toBe<Promise<void>>()
 
 // Testing define.func only accepts one argument
 const fetchFuncSingleArgument = async (args: { k1: string, k2: string }) => {
@@ -103,13 +95,13 @@ const fetchFuncMultipleArguments = async (k1: string, k2:string) => {
   return { k1, k2 }
 }
 
-expectAssignable<Parameters<typeof unionMemoryCache.define>>(['fetchFuncSingleArgument', fetchFuncSingleArgument])
-expectNotAssignable<Parameters<typeof unionMemoryCache.define>>(['fetchFuncMultipleArguments', fetchFuncMultipleArguments])
+expect(unionMemoryCache.define).type.toBeCallableWith('fetchFuncSingleArgument', fetchFuncSingleArgument)
+expect(unionMemoryCache.define).type.not.toBeCallableWith('fetchFuncMultipleArguments', fetchFuncMultipleArguments)
 
 // Testing define.opts.references
 memoryCache.define('fetchFuncSingleArgument', {
   references: (args, key, result) => {
-    expectType<{ k1: string; k2: string }>(args)
+    expect(args).type.toBe<{ k1: string; k2: string }>()
     return []
   }
 }, fetchFuncSingleArgument)
@@ -119,7 +111,7 @@ class CustomStorage extends StorageInterface { }
 // createStorage with valid custom storage
 const custom = new CustomStorage({})
 const storageCustom = createStorage('custom', { storage: custom } as StorageCustomOptions)
-expectType<StorageInterface>(storageCustom)
+expect(storageCustom).type.toBe<StorageInterface>()
 
 const customCache = createCache({
   storage: {
@@ -127,4 +119,4 @@ const customCache = createCache({
     options: { storage: custom },
   },
 })
-expectType<Cache>(customCache)
+expect(customCache).type.toBe<Cache>()
