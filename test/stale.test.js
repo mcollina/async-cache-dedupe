@@ -29,21 +29,21 @@ test('stale', async (t) => {
   deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
   deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
 
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
   await sleep(2500)
-  equal(storage.getTTL('fetchSomething~42') < 10, true)
+  equal(storage.getTTL('fetchSomething~n42') < 10, true)
 
   // This value will be revalidated
   toReturn++
   deepStrictEqual(await cache.fetchSomething(42), { k: 42 })
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
 
   await sleep(500)
 
   deepStrictEqual(await cache.fetchSomething(42), { k: 43 })
 
   deepStrictEqual(await cache.fetchSomething(42), { k: 43 })
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
 })
 
 test('global stale is a positive integer', async (t) => {
@@ -103,21 +103,21 @@ test('stale as a function', async (t) => {
   deepStrictEqual(await cache.fetchSomething(42), { k: 42, stale: 9 })
   deepStrictEqual(await cache.fetchSomething(42), { k: 42, stale: 9 })
 
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
   await sleep(2500)
-  equal(storage.getTTL('fetchSomething~42') < 10, true)
+  equal(storage.getTTL('fetchSomething~n42') < 10, true)
 
   // This value will be revalidated
   toReturn++
   deepStrictEqual(await cache.fetchSomething(42), { k: 42, stale: 9 })
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
 
   await sleep(500)
 
   deepStrictEqual(await cache.fetchSomething(42), { k: 43, stale: 9 })
 
   deepStrictEqual(await cache.fetchSomething(42), { k: 43, stale: 9 })
-  equal(storage.getTTL('fetchSomething~42'), 10)
+  equal(storage.getTTL('fetchSomething~n42'), 10)
 })
 
 test('stale as a function parameter', async (t) => {

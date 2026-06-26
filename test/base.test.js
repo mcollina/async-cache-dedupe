@@ -169,7 +169,7 @@ describe('base', async () => {
     const p1 = cache.fetchSomething({ k: 42 })
     const p2 = cache.fetchSomething({ k: 24 })
 
-    deepStrictEqual([...cache[kValues].fetchSomething.dedupes.keys()], ['42', '24'])
+    deepStrictEqual([...cache[kValues].fetchSomething.dedupes.keys()], ['n42', 'n24'])
     const res = await Promise.all([p1, p2])
 
     deepStrictEqual(res, [
