@@ -62,6 +62,6 @@
   },
   "dependencies": {
     "mnemonist": "^0.40.3",
-    "safe-stable-stringify": "^2.5.0"
+    "object-identity": "^0.2.2"
   }
 }

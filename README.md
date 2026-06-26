@@ -109,7 +109,7 @@ Options:
 Define a new function to cache of the given `name`.
 
 The `define` method adds a `cache[name]` function that will call the `original` function if the result is not present
-in the cache. The cache key for `arg` is computed using [`safe-stable-stringify`](https://www.npmjs.com/package/safe-stable-stringify) and it is passed as the `cacheKey` argument to the original function.
+in the cache. The cache key for `arg` is computed using [`object-identity`](https://www.npmjs.com/package/object-identity) and it is passed as the `cacheKey` argument to the original function.
 
 Options:
 

@@ -1,7 +1,7 @@
 'use strict'
 
 const { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale } = require('./symbol')
-const stringify = require('safe-stable-stringify')
+const { identify } = require('object-identity')
 const createStorage = require('./storage')
 
 class Cache {
@@ -228,7 +228,7 @@ class Wrapper {
 
   getKey (args) {
     const id = this.serialize ? this.serialize(args) : args
-    return typeof id === 'string' ? id : stringify(id)
+    return typeof id === 'string' ? id : identify(id)
   }
 
   getStorageKey (key) {

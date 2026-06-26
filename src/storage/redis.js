@@ -1,6 +1,6 @@
 'use strict'
 
-const stringify = require('safe-stable-stringify')
+const { identify } = require('object-identity')
 const StorageInterface = require('./interface')
 const { findNotMatching, randomSubset, abstractLogging } = require('../util')
 
@@ -132,7 +132,7 @@ class StorageRedis extends StorageInterface {
     }
 
     try {
-      await this.store.set(key, stringify(value), 'EX', ttl)
+      await this.store.set(key, identify(value), 'EX', ttl)
 
       if (!references || references.length < 1) {
         return
