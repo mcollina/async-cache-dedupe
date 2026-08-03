@@ -11,6 +11,7 @@ const storageOptions: StorageMemoryOptions = {
 const cache = createCache()
 expect(cache).type.toBe<Cache>()
 expect(cache.exists('fetchSomething', 'key')).type.toBe<Promise<boolean>>()
+expect(cache.getSync('fetchSomething', 'key')).type.toBe<any>()
 
 const storage = createStorage('memory', storageOptions)
 expect(storage).type.toBe<StorageInterface>()

@@ -159,6 +159,14 @@ class Cache {
     return this[kValues][name].get(key)
   }
 
+  getSync (name, key) {
+    if (!this[kValues][name]) {
+      throw new Error(`${name} is not defined in the cache`)
+    }
+
+    return this[kValues][name].getSync(key)
+  }
+
   async exists (name, key) {
     if (!this[kValues][name]) {
       throw new Error(`${name} is not defined in the cache`)
@@ -362,6 +370,39 @@ class Wrapper {
       return await this.transformer.deserialize(data)
     }
     return data
+  }
+
+  /**
+   * Synchronous variant of get. Returns the cached value if the underlying
+   * storage can answer synchronously and the transformer (if any) is
+   * synchronous; returns undefined otherwise.
+   *
+   * @param {string} key
+   * @returns {undefined|*}
+   */
+  getSync (key) {
+    if (typeof this.storage.getSync !== 'function') {
+      return undefined
+    }
+    try {
+      const data = this.storage.getSync(this.getStorageKey(key))
+      if (data === undefined) {
+        return undefined
+      }
+      if (this.transformer && typeof this.transformer.deserialize === 'function') {
+        // an async deserialize would return a Promise, defeating the purpose
+        // of the sync API; in that case, return undefined so the caller
+        // can fall back to the async get.
+        if (this.transformer.deserialize.constructor.name === 'AsyncFunction') {
+          return undefined
+        }
+        return this.transformer.deserialize(data)
+      }
+      return data
+    } catch (err) {
+      this.onError(err)
+      return undefined
+    }
   }
 
   async exists (key) {

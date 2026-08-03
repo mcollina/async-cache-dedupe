@@ -71,6 +71,90 @@ describe('Cache', async (t) => {
     })
   })
 
+  describe('getSync', async () => {
+    test('should return the value from a memory cache hit without await', async (t) => {
+      const { equal } = tspl(t, { plan: 2 })
+      const cache = new Cache({ storage: createStorage('memory', {}) })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+
+      // getSync auto-prefixes the storage key, so the user passes the
+      // same key the wrapped function saw.
+      const value = cache.getSync('f', 'foo')
+      equal(value.k, 'foo')
+      // calling getSync must not return a Promise; it must return the value
+      equal(typeof value, 'object')
+    })
+
+    test('should return undefined on a cache miss', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({ storage: createStorage('memory', {}) })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      const value = cache.getSync('f', 'nope')
+      equal(value, undefined)
+    })
+
+    test('should return undefined when storage does not implement getSync', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: {
+          async get (key) { return 'the-value' }
+          // intentionally no getSync
+        }
+      })
+      cache.define('f', () => 'the-value')
+
+      const value = cache.getSync('f', 'foo')
+      equal(value, undefined)
+    })
+
+    test('should throw trying to use getSync of not defined name', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({ storage: createStorage() })
+      cache.define('f', () => 'the-value')
+
+      try {
+        cache.getSync('fiiii', 'key')
+      } catch (err) {
+        equal(err.message, 'fiiii is not defined in the cache')
+      }
+    })
+
+    test('should apply the transformer.deserialize synchronously when transformer is sync', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        transformer: {
+          serialize: (data) => ({ wrapped: data }),
+          deserialize: (data) => data.wrapped
+        }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      const value = cache.getSync('f', 'foo')
+      equal(value.k, 'foo')
+    })
+
+    test('should return undefined when transformer is async', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        transformer: {
+          serialize: (data) => data,
+          deserialize: async (data) => data
+        }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      const value = cache.getSync('f', 'foo')
+      equal(value, undefined)
+    })
+  })
+
   describe('exists', async () => {
     test('should use storage to check if a value exists', async (t) => {
       const { equal } = tspl(t, { plan: 1 })

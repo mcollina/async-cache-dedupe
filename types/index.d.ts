@@ -92,6 +92,7 @@ export declare class StorageInterface {
   constructor (options: any)
 
   get (key: string): Promise<undefined | any>
+  getSync (key: string): undefined | any
   set (key: string, value: any, ttl: number, references?: References): Promise<void>
   remove (key: string): Promise<void>
   invalidate (references: References): Promise<void>
@@ -145,6 +146,8 @@ export declare class Cache {
   clear (name: string, value: any): Promise<void>
 
   get (name: string, key: string): Promise<any>
+
+  getSync (name: string, key: string): undefined | any
 
   exists (name: string, key: string): Promise<boolean>
 

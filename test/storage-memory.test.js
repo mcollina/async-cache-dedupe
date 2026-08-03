@@ -66,6 +66,33 @@ describe('storage memory', async () => {
     })
   })
 
+  describe('getSync', async () => {
+    test('should get a value by a key previously stored', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 100)
+
+      assert.equal(storage.getSync('foo'), 'bar')
+    })
+
+    test('should get undefined retrieving a non stored key', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 100)
+
+      assert.equal(storage.getSync('no-foo'), undefined)
+    })
+
+    test('should get undefined retrieving an expired value', async () => {
+      const storage = createStorage('memory')
+
+      storage.set('foo', 'bar', 1)
+      await sleep(2000)
+
+      assert.equal(storage.getSync('foo'), undefined)
+    })
+  })
+
   describe('exists', async () => {
     test('should get true by a key previously stored', async () => {
       const storage = createStorage('memory')

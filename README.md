@@ -176,6 +176,42 @@ Options:
   await cache.fetchUserProfile()
   ```
 
+### `cache.get(name, key)`
+
+Returns the value stored in the cache for the given `name` and `key`. Always returns a `Promise`. On a cache miss, the value is computed by calling the underlying function and stored in the cache (subject to the configured `ttl`).
+
+### `cache.getSync(name, key)`
+
+Synchronous variant of `cache.get`. Returns the cached value directly when the underlying storage can answer synchronously (currently only `memory`), and returns `undefined` otherwise. Use this on hot paths where you have already populated the cache and want to avoid the extra event loop tick introduced by `Promise` wrapping.
+
+`getSync` returns `undefined` if:
+
+* the key is not in the cache (miss)
+* the entry is expired
+* the configured storage is asynchronous (e.g. `redis`)
+* a `transformer` is configured with an async `deserialize`
+
+The `name` must be defined via `cache.define`, otherwise an `Error` is thrown (same behavior as `cache.get`).
+
+The `key` is the same key the wrapped function receives, without the internal `${name}~` storage prefix.
+
+Example:
+
+```js
+const cache = createCache({ ttl: 60, storage: { type: 'memory' } })
+cache.define('fetchSomething', async (k) => ({ k }))
+
+await cache.fetchSomething('42')     // populate the cache
+
+const value = cache.getSync('fetchSomething', '42')
+if (value === undefined) {
+  // not cached, or storage is async — fall back to the async path
+  const v = await cache.fetchSomething('42')
+} else {
+  // use `value` directly, no `await` needed
+}
+```
+
 ### `cache.clear([name], [arg])`
 
 Clear the cache. If `name` is specified, all the cache entries from the function defined with that name are cleared.

@@ -133,6 +133,22 @@ describe('storage redis', async () => {
     })
   })
 
+  describe('getSync', async () => {
+    test('should return undefined because redis storage is not synchronous', async (t) => {
+      const storage = createStorage('redis', { client: redisClient })
+
+      await storage.set('foo', 'bar', 100)
+
+      assert.equal(storage.getSync('foo'), undefined)
+    })
+
+    test('should return undefined on a missing key', async (t) => {
+      const storage = createStorage('redis', { client: redisClient })
+
+      assert.equal(storage.getSync('no-foo'), undefined)
+    })
+  })
+
   describe('exists', async () => {
     beforeEach(async () => {
       await redisClient.flushall()

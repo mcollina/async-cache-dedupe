@@ -39,6 +39,16 @@ class StorageInterface {
    * @returns {boolean} true if key exists, false otherwise
    */
   async exists (key) { throw new Error('storage exists method not implemented') }
+
+  /**
+   * Synchronous variant of get. Optional: only storages that can answer
+   * without I/O should implement this. The Cache layer falls back to
+   * returning undefined when this method is missing.
+   *
+   * @param {string} key
+   * @returns {undefined|*} undefined if key not found or storage cannot serve synchronously
+   */
+  getSync (key) { throw new Error('storage getSync method not implemented') }
 }
 
 module.exports = StorageInterface

@@ -71,6 +71,23 @@ class StorageMemory extends StorageInterface {
   }
 
   /**
+   * Synchronous variant of get. Returns the cached value if the key is
+   * present and not expired; returns undefined otherwise. The expired-key
+   * cleanup is left to the async `get`/LRU eviction; this method must
+   * not perform I/O or schedule timers.
+   *
+   * @param {string} key
+   * @returns {undefined|*}
+   */
+  getSync (key) {
+    const entry = this.store.get(key)
+    if (entry && entry.start + entry.ttl > now()) {
+      return entry.value
+    }
+    return undefined
+  }
+
+  /**
    * check if a key exists
    * @param {string} key
    * @returns {boolean} true if key exists, false otherwise
