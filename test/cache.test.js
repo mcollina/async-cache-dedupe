@@ -153,6 +153,32 @@ describe('Cache', async (t) => {
       const value = cache.getSync('f', 'foo')
       equal(value, undefined)
     })
+
+    test('should call onError and return undefined when transformer.deserialize throws', async (t) => {
+      const { equal } = tspl(t, { plan: 3 })
+      let onErrorCalled = false
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        onError: (err) => {
+          onErrorCalled = true
+          equal(err.message, 'deserialize boom')
+        }
+      })
+      cache.define('f', {
+        ttl: 60,
+        transformer: {
+          serialize: (data) => data,
+          deserialize: () => { throw new Error('deserialize boom') }
+        }
+      }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      const value = cache.getSync('f', 'foo')
+      equal(value, undefined)
+      // onError assertion fires inside the callback; if it didn't run,
+      // surface the missing call.
+      equal(onErrorCalled, true)
+    })
   })
 
   describe('exists', async () => {

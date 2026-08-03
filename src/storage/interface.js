@@ -42,13 +42,14 @@ class StorageInterface {
 
   /**
    * Synchronous variant of get. Optional: only storages that can answer
-   * without I/O should implement this. The Cache layer falls back to
-   * returning undefined when this method is missing.
+   * without I/O should override this. The default returns `undefined`,
+   * signalling to callers that the storage is not synchronously
+   * readable.
    *
    * @param {string} key
    * @returns {undefined|*} undefined if key not found or storage cannot serve synchronously
    */
-  getSync (key) { throw new Error('storage getSync method not implemented') }
+  getSync (key) { return undefined }
 }
 
 module.exports = StorageInterface

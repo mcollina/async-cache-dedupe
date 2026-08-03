@@ -130,7 +130,9 @@ describe('storage memory', async () => {
 
       await sleep(1000)
 
-      assert.equal(storage.getTTL('foo'), 99)
+      // tolerate 1ms overshoot of the sleep — getTTL returns a float
+      // and a 1001ms sleep can already tick the integer TTL down to 98
+      assert.ok(Math.floor(storage.getTTL('foo')) >= 98 && Math.floor(storage.getTTL('foo')) <= 99)
     })
 
     test('should get the TTL of a a key without TTL', async () => {

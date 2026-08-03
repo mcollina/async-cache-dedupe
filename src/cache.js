@@ -381,9 +381,6 @@ class Wrapper {
    * @returns {undefined|*}
    */
   getSync (key) {
-    if (typeof this.storage.getSync !== 'function') {
-      return undefined
-    }
     try {
       const data = this.storage.getSync(this.getStorageKey(key))
       if (data === undefined) {
