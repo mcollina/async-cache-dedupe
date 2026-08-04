@@ -13,6 +13,11 @@ expect(cache).type.toBe<Cache>()
 expect(cache.exists('fetchSomething', 'key')).type.toBe<Promise<boolean>>()
 expect(cache.getSync('fetchSomething', 'key')).type.toBe<any>()
 
+const cacheWithSyncCache = createCache({
+  syncCache: { size: 1024, ttl: 5000 }
+})
+expect(cacheWithSyncCache).type.toBe<Cache>()
+
 const storage = createStorage('memory', storageOptions)
 expect(storage).type.toBe<StorageInterface>()
 expect(storage.exists('key')).type.toBe<Promise<boolean>>()

@@ -182,13 +182,13 @@ Returns the value stored in the cache for the given `name` and `key`. Always ret
 
 ### `cache.getSync(name, key)`
 
-Synchronous variant of `cache.get`. Returns the cached value directly when the underlying storage can answer synchronously (currently only `memory`), and returns `undefined` otherwise. Use this on hot paths where you have already populated the cache and want to avoid the extra event loop tick introduced by `Promise` wrapping.
+Synchronous variant of `cache.get`. Returns the cached value directly when the underlying storage can answer synchronously (the in-process `memory` storage), and returns `undefined` otherwise. Use this on hot paths where you have already populated the cache and want to avoid the extra event loop tick introduced by `Promise` wrapping.
 
 `getSync` returns `undefined` if:
 
 * the key is not in the cache (miss)
 * the entry is expired
-* the configured storage is asynchronous (e.g. `redis`)
+* the configured storage is asynchronous (e.g. `redis` without `syncCache`)
 * a `transformer` is configured with an async `deserialize`
 
 The `name` must be defined via `cache.define`, otherwise an `Error` is thrown (same behavior as `cache.get`).
@@ -211,6 +211,33 @@ if (value === undefined) {
   // use `value` directly, no `await` needed
 }
 ```
+
+### `syncCache` option (opt-in)
+
+`getSync` is most useful with the in-process `memory` storage. For Redis-backed caches (and any other async storage), you can opt in to a small, bounded-staleness secondary cache that backs `getSync`:
+
+```js
+const cache = createCache({
+  ttl: 60,
+  storage: { type: 'redis', options: { client } },
+  syncCache: { size: 1024, ttl: 1000 } // 1s staleness budget, 1024 entries
+})
+```
+
+When `syncCache` is configured, every successful async fetch populates an in-process LRU. `getSync` reads the LRU directly. The trade-off is explicit: a `getSync` hit may return data up to `syncCache.ttl` milliseconds old, even if Redis has newer data. Pick the staleness budget that fits your freshness requirements.
+
+The `syncCache` option can also be set per defined function, overriding the cache-level setting:
+
+```js
+cache.define('hotPath', {
+  ttl: 60,
+  syncCache: { size: 100, ttl: 500 }   // tighter staleness for this entry only
+}, async (k) => ({ k }))
+```
+
+Without `syncCache`, `getSync` falls through to the underlying storage's `getSync`. For Redis, that returns `undefined` (Redis is async). For `memory`, it reads the storage's LRU directly with no staleness bound.
+
+The sync LRU is invalidated when `cache.invalidate` (by references) or `cache.clear` is called, so callers don't see stale data after explicit invalidations. `cache.set(name, key, value, …)` removes the corresponding sync LRU entry but does not repopulate it — the next `getSync` will miss until either the wrapped function runs again or an async fetch reads it back.
 
 ### `cache.clear([name], [arg])`
 

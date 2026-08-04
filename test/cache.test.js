@@ -181,6 +181,153 @@ describe('Cache', async (t) => {
     })
   })
 
+  describe('syncCache', async () => {
+    test('should return the value from the sync LRU after a prior async get', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      const v = cache.getSync('f', 'foo')
+      equal(v.k, 'foo')
+    })
+
+    test('should return undefined on a sync-cache miss when the underlying storage is async (custom)', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      // Custom storage that does not implement getSync; only async get.
+      const cache = new Cache({
+        storage: {
+          async get (key) { return 'from-async-storage' }
+        },
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', async (k) => ({ k }))
+
+      // never called cache.f, so the sync LRU is empty
+      const v = cache.getSync('f', 'nope')
+      equal(v, undefined)
+    })
+
+    test('should return undefined when the LRU entry is older than syncCache.ttl', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        syncCache: { size: 10, ttl: 50 } // 50ms staleness
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      await new Promise(resolve => setTimeout(resolve, 80))
+      const v = cache.getSync('f', 'foo')
+      equal(v, undefined)
+    })
+
+    test('should clear matching entries from the sync LRU on cache.invalidate', async (t) => {
+      const { equal } = tspl(t, { plan: 2 })
+      const cache = new Cache({
+        storage: createStorage('memory', { invalidation: true }),
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', {
+        ttl: 60,
+        references: (args, key, result) => ['user:1']
+      }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      equal(cache.getSync('f', 'foo').k, 'foo')
+
+      await cache.invalidate('f', ['user:1'])
+      equal(cache.getSync('f', 'foo'), undefined)
+    })
+
+    test('should clear the sync LRU entries for a name on cache.clear(name, value)', async (t) => {
+      const { equal } = tspl(t, { plan: 2 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      equal(cache.getSync('f', 'foo').k, 'foo')
+
+      await cache.clear('f', 'foo')
+      equal(cache.getSync('f', 'foo'), undefined)
+    })
+
+    test('should clear all sync LRU entries for a name on cache.clear(name)', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.f('foo')
+      await cache.f('bar')
+
+      await cache.clear('f')
+      // sync LRU was cleared, so getSync now misses for both keys
+      equal(cache.getSync('f', 'foo'), undefined)
+    })
+
+    test('should support per-define syncCache override that does not leak between defines', async (t) => {
+      const { equal, notEqual } = tspl(t, { plan: 2 })
+      const cache = new Cache({ storage: createStorage('memory', {}) })
+
+      cache.define('a', {
+        ttl: 60,
+        syncCache: { size: 10, ttl: 60000 }
+      }, async (k) => ({ k }))
+      cache.define('b', { ttl: 60 }, async (k) => ({ k }))
+
+      await cache.a('1')
+      await cache.b('2')
+
+      // 'a' has syncCache -> getSync hits
+      const aHit = cache.getSync('a', '1')
+      equal(aHit.k, '1')
+      // 'b' does not have syncCache -> getSync falls through to
+      // StorageMemory.getSync, which also hits, so the assertion
+      // for 'b' is that it has the value (not undefined).
+      notEqual(cache.getSync('b', '2'), undefined)
+    })
+
+    test('should inherit the cache-level syncCache to all defines when no per-define override', async (t) => {
+      const { equal } = tspl(t, { plan: 1 })
+      const cache = new Cache({
+        storage: createStorage('memory', {}),
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ k }))
+      await cache.f('foo')
+      equal(cache.getSync('f', 'foo').k, 'foo')
+    })
+
+    test('should throw when syncCache.size is invalid', async (t) => {
+      const { ok } = tspl(t, { plan: 1 })
+      try {
+        // eslint-disable-next-line no-new
+        new Cache({ storage: createStorage(), syncCache: { size: 0, ttl: 1000 } })
+      } catch (err) {
+        ok(err.message.includes('syncCache.size'))
+      }
+    })
+
+    test('should throw when syncCache.ttl is invalid', async (t) => {
+      const { ok } = tspl(t, { plan: 1 })
+      try {
+        // eslint-disable-next-line no-new
+        new Cache({ storage: createStorage(), syncCache: { size: 10, ttl: -1 } })
+      } catch (err) {
+        ok(err.message.includes('syncCache.ttl'))
+      }
+    })
+  })
+
   describe('exists', async () => {
     test('should use storage to check if a value exists', async (t) => {
       const { equal } = tspl(t, { plan: 1 })

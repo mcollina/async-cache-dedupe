@@ -1,8 +1,9 @@
 'use strict'
 
-const { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale } = require('./symbol')
+const { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale, kSyncCache } = require('./symbol')
 const stringify = require('safe-stable-stringify')
 const createStorage = require('./storage')
+const { LRUCache } = require('mnemonist')
 
 class Cache {
   /**
@@ -46,6 +47,18 @@ class Cache {
       throw new Error('stale must be an integer greater or equal to 0')
     }
 
+    if (options.syncCache !== undefined && options.syncCache !== null) {
+      if (typeof options.syncCache !== 'object') {
+        throw new Error('syncCache must be an object with size and ttl')
+      }
+      if (typeof options.syncCache.size !== 'number' || !Number.isInteger(options.syncCache.size) || options.syncCache.size < 1) {
+        throw new Error('syncCache.size must be a positive integer greater than 0')
+      }
+      if (typeof options.syncCache.ttl !== 'number' || !Number.isInteger(options.syncCache.ttl) || options.syncCache.ttl < 1) {
+        throw new Error('syncCache.ttl must be a positive integer greater than 0 (in milliseconds)')
+      }
+    }
+
     this[kValues] = {}
 
     this[kStorage] = options.storage
@@ -60,6 +73,7 @@ class Cache {
     this[kOnHit] = options.onHit || noop
     this[kOnMiss] = options.onMiss || noop
     this[kStale] = options.stale || 0
+    this[kSyncCache] = options.syncCache || null
   }
 
   /**
@@ -109,6 +123,18 @@ class Cache {
       }
     }
 
+    if (opts.syncCache !== undefined && opts.syncCache !== null) {
+      if (typeof opts.syncCache !== 'object') {
+        throw new Error('syncCache must be an object with size and ttl')
+      }
+      if (typeof opts.syncCache.size !== 'number' || !Number.isInteger(opts.syncCache.size) || opts.syncCache.size < 1) {
+        throw new Error('syncCache.size must be a positive integer greater than 0')
+      }
+      if (typeof opts.syncCache.ttl !== 'number' || !Number.isInteger(opts.syncCache.ttl) || opts.syncCache.ttl < 1) {
+        throw new Error('syncCache.ttl must be a positive integer greater than 0 (in milliseconds)')
+      }
+    }
+
     let storage
     if (opts.storage) {
       storage = createStorage(opts.storage.type, opts.storage.options)
@@ -124,8 +150,9 @@ class Cache {
     const onHit = opts.onHit || this[kOnHit]
     const onMiss = opts.onMiss || this[kOnMiss]
     const transformer = opts.transformer || this[kTransfromer]
+    const syncCache = opts.syncCache !== undefined ? opts.syncCache : this[kSyncCache]
 
-    const wrapper = new Wrapper(func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale)
+    const wrapper = new Wrapper(func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale, syncCache)
 
     this[kValues][name] = wrapper
     this[name] = wrapper.add.bind(wrapper)
@@ -215,8 +242,9 @@ class Wrapper {
    * @param {function} onHit
    * @param {function} onMiss
    * @param {stale} ttl
+   * @param {?{size: number, ttl: number}} syncCache
    */
-  constructor (func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale) {
+  constructor (func, name, serialize, references, storage, transformer, ttl, onDedupe, onError, onHit, onMiss, stale, syncCache) {
     this.dedupes = new Map()
     this.staleDedupes = new Set()
     this.func = func
@@ -232,6 +260,13 @@ class Wrapper {
     this.onHit = onHit
     this.onMiss = onMiss
     this.stale = stale
+    this.syncCacheConfig = syncCache || null
+    // Lazily created on first sync read/write to avoid the LRU
+    // overhead for wrappers that never use getSync.
+    this._syncStore = null
+    // reference -> set of storage keys; mirrors StorageMemory's
+    // keysReferences / referencesKeys structure for invalidation.
+    this._syncRefKeys = null
   }
 
   getKey (args) {
@@ -245,6 +280,140 @@ class Wrapper {
 
   getStorageName () {
     return `${this.name}~`
+  }
+
+  /**
+   * Strip the `${name}~` prefix from a storage key to recover the user
+   * key. Returns undefined if the storage key doesn't belong to this
+   * wrapper.
+   */
+  _userKeyFromStorageKey (storageKey) {
+    if (typeof storageKey !== 'string') {
+      return undefined
+    }
+    const prefix = this.getStorageName()
+    if (storageKey.startsWith(prefix)) {
+      return storageKey.slice(prefix.length)
+    }
+    return undefined
+  }
+
+  /**
+   * Lazily create the in-process LRU that backs getSync. Each entry
+   * stores { value, insertedAt } so we can apply a per-entry TTL.
+   */
+  _ensureSyncStore () {
+    if (this._syncStore !== null) {
+      return
+    }
+    this._syncStore = new LRUCache(this.syncCacheConfig.size)
+    this._syncRefKeys = new Map()
+  }
+
+  /**
+   * Read from the sync LRU; returns the cached value if present and
+   * within the staleness window, otherwise undefined. Does not perform
+   * any I/O.
+   */
+  _readSyncCache (key) {
+    this._ensureSyncStore()
+    const entry = this._syncStore.get(key)
+    if (!entry) {
+      return undefined
+    }
+    if (nowMs() - entry.insertedAt >= this.syncCacheConfig.ttl) {
+      // mnemonist's LRUCache is append-only; overwriting with undefined
+      // makes the next get() return undefined, matching the pattern used
+      // by StorageMemory._removeKey.
+      this._syncStore.set(key, undefined)
+      return undefined
+    }
+    return entry.value
+  }
+
+  /**
+   * Write to the sync LRU. The data is stored as-is; transformer
+   * application happens in `_maybeDeserialize` on read.
+   */
+  _writeSyncCache (key, value, references) {
+    this._ensureSyncStore()
+    this._syncStore.set(key, { value, insertedAt: nowMs() })
+
+    if (!references || references.length < 1) {
+      return
+    }
+
+    for (const ref of references) {
+      let keys = this._syncRefKeys.get(ref)
+      if (!keys) {
+        keys = new Set()
+        this._syncRefKeys.set(ref, keys)
+      }
+      keys.add(key)
+    }
+  }
+
+  /**
+   * Remove sync LRU entries that have any of the given references.
+   */
+  _invalidateSyncCacheByReferences (references) {
+    if (!this._syncStore) {
+      return
+    }
+    const refs = Array.isArray(references) ? references : [references]
+    for (const ref of refs) {
+      const keys = this._syncRefKeys.get(ref)
+      if (!keys) {
+        continue
+      }
+      for (const key of keys) {
+        this._syncStore.set(key, undefined)
+      }
+      this._syncRefKeys.delete(ref)
+    }
+  }
+
+  /**
+   * Remove a single sync LRU entry (used by Wrapper.set on overwrite).
+   */
+  _removeSyncCache (key) {
+    if (!this._syncStore) {
+      return
+    }
+    this._syncStore.set(key, undefined)
+    for (const keys of this._syncRefKeys.values()) {
+      keys.delete(key)
+    }
+  }
+
+  /**
+   * Clear all sync LRU entries for this wrapper.
+   */
+  _clearSyncCache () {
+    if (this._syncStore) {
+      this._syncStore.clear()
+    }
+    if (this._syncRefKeys) {
+      this._syncRefKeys.clear()
+    }
+  }
+
+  /**
+   * Apply the transformer (if any) to a value read synchronously.
+   * Returns undefined if the transformer is async (caller should fall
+   * back to the async path).
+   */
+  _maybeDeserialize (data) {
+    if (data === undefined) {
+      return undefined
+    }
+    if (this.transformer && typeof this.transformer.deserialize === 'function') {
+      if (this.transformer.deserialize.constructor.name === 'AsyncFunction') {
+        return undefined
+      }
+      return this.transformer.deserialize(data)
+    }
+    return data
   }
 
   add (args) {
@@ -276,6 +445,9 @@ class Wrapper {
 
       if (data !== undefined) {
         this.onHit(key)
+        if (this.syncCacheConfig) {
+          this._writeSyncCache(key, data)
+        }
         const stale = typeof this.stale === 'function' ? this.stale(data) : this.stale
         if (stale > 0) {
           const remainingTTL = await this.storage.getTTL(storageKey)
@@ -310,11 +482,15 @@ class Wrapper {
 
     if (!this.references) {
       await this.set(storageKey, result, ttl)
+      if (this.syncCacheConfig) {
+        this._writeSyncCache(key, result)
+      }
       return result
     }
 
+    let references
     try {
-      let references = this.references(args, key, result)
+      references = this.references(args, key, result)
       let value = result
       if (references && typeof references.then === 'function') { references = await references }
       if (this.transformer) {
@@ -324,6 +500,10 @@ class Wrapper {
       await this.storage.set(storageKey, value, ttl, references)
     } catch (err) {
       this.onError(err)
+    }
+
+    if (this.syncCacheConfig) {
+      this._writeSyncCache(key, result, references)
     }
 
     return result
@@ -356,12 +536,14 @@ class Wrapper {
       const key = this.getKey(value)
       this.dedupes.delete(key)
       this.staleDedupes.delete(key)
+      this._removeSyncCache(key)
       await this.storage.remove(this.getStorageKey(key))
       return
     }
     await this.storage.clear(this.getStorageName())
     this.dedupes.clear()
     this.staleDedupes.clear()
+    this._clearSyncCache()
   }
 
   async get (key) {
@@ -373,29 +555,39 @@ class Wrapper {
   }
 
   /**
-   * Synchronous variant of get. Returns the cached value if the underlying
-   * storage can answer synchronously and the transformer (if any) is
-   * synchronous; returns undefined otherwise.
+   * Synchronous variant of get. Reads the opt-in in-process LRU
+   * (syncCache) first; falls back to the underlying storage's
+   * getSync when the LRU is empty AND the LRU is not configured.
+   *
+   * When syncCache is configured, the LRU is authoritative for sync
+   * reads: a stale or missing entry returns undefined even if the
+   * underlying storage would still have the data. This is by design
+   * — the caller is opting into bounded staleness, not into a
+   * best-effort fallback.
+   *
+   * Returns undefined on miss, expired entry, or when the
+   * transformer.deserialize is async.
    *
    * @param {string} key
    * @returns {undefined|*}
    */
   getSync (key) {
     try {
+      if (this.syncCacheConfig) {
+        const hit = this._readSyncCache(key)
+        if (hit !== undefined) {
+          this.onHit(key)
+          return this._maybeDeserialize(hit)
+        }
+        // sync LRU is the source of truth for sync reads; do not
+        // fall back to the underlying storage when configured.
+        return undefined
+      }
       const data = this.storage.getSync(this.getStorageKey(key))
       if (data === undefined) {
         return undefined
       }
-      if (this.transformer && typeof this.transformer.deserialize === 'function') {
-        // an async deserialize would return a Promise, defeating the purpose
-        // of the sync API; in that case, return undefined so the caller
-        // can fall back to the async get.
-        if (this.transformer.deserialize.constructor.name === 'AsyncFunction') {
-          return undefined
-        }
-        return this.transformer.deserialize(data)
-      }
-      return data
+      return this._maybeDeserialize(data)
     } catch (err) {
       this.onError(err)
       return undefined
@@ -407,6 +599,13 @@ class Wrapper {
   }
 
   async set (key, value, ttl, references) {
+    // Overwriting a key invalidates the corresponding sync-cache entry;
+    // the new value is not yet in the sync cache and must be re-fetched
+    // (or rewritten by the wrapped function) before getSync can hit.
+    const userKey = this._userKeyFromStorageKey(key)
+    if (userKey !== undefined) {
+      this._removeSyncCache(userKey)
+    }
     if (this.transformer) {
       value = this.transformer.serialize(value)
     }
@@ -414,6 +613,9 @@ class Wrapper {
   }
 
   async invalidate (references) {
+    if (this.syncCacheConfig) {
+      this._invalidateSyncCacheByReferences(references)
+    }
     return this.storage.invalidate(references)
   }
 }
@@ -425,5 +627,9 @@ class Query {
 }
 
 function noop () { }
+
+function nowMs () {
+  return Date.now()
+}
 
 module.exports.Cache = Cache

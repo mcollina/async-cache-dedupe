@@ -149,6 +149,47 @@ describe('storage redis', async () => {
     })
   })
 
+  describe('syncCache integration with cache.getSync', async () => {
+    beforeEach(async () => {
+      await redisClient.flushall()
+    })
+
+    test('cache.getSync returns the value from the sync LRU after an async fetch', async (t) => {
+      const { Cache } = require('../src/cache')
+      const cache = new Cache({
+        storage: { type: 'redis', options: { client: redisClient } },
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', { ttl: 60 }, async (k) => ({ v: k * 2 }))
+
+      await cache.f(21)
+      const v = cache.getSync('f', '21')
+      assert.deepEqual(v, { v: 42 })
+      assert.ok(!(v instanceof Promise))
+    })
+
+    test('cache.invalidate clears matching entries from the sync LRU', async (t) => {
+      const { Cache } = require('../src/cache')
+      const cache = new Cache({
+        storage: {
+          type: 'redis',
+          options: { client: redisClient, invalidation: true }
+        },
+        syncCache: { size: 10, ttl: 60000 }
+      })
+      cache.define('f', {
+        ttl: 60,
+        references: (args, key, result) => ['user:1']
+      }, async (k) => ({ v: k }))
+
+      await cache.f('foo')
+      assert.deepEqual(cache.getSync('f', 'foo'), { v: 'foo' })
+
+      await cache.invalidate('f', ['user:1'])
+      assert.equal(cache.getSync('f', 'foo'), undefined)
+    })
+  })
+
   describe('exists', async () => {
     beforeEach(async () => {
       await redisClient.flushall()

@@ -10,5 +10,6 @@ const kOnError = Symbol('kOnError')
 const kOnHit = Symbol('kOnHit')
 const kOnMiss = Symbol('kOnMiss')
 const kStale = Symbol('kStale')
+const kSyncCache = Symbol('kSyncCache')
 
-module.exports = { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale }
+module.exports = { kValues, kStorage, kStorages, kTransfromer, kTTL, kOnDedupe, kOnError, kOnHit, kOnMiss, kStale, kSyncCache }

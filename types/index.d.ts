@@ -66,6 +66,13 @@ interface DataTransformer {
   deserialize: (data: any) => any;
 }
 
+export interface SyncCacheOptions {
+  /** Maximum number of entries in the in-process LRU used to back getSync. */
+  size: number;
+  /** Per-entry staleness bound, in milliseconds. After this, getSync returns undefined for the entry. */
+  ttl: number;
+}
+
 type Events = {
   onDedupe?: (key: string) => void;
   onError?: (err: any) => void;
@@ -108,6 +115,7 @@ export declare function createCache (
     ttl?: number | ((result: unknown) => number);
     transformer?: DataTransformer;
     stale?: number | ((result: unknown) => number);
+    syncCache?: SyncCacheOptions;
   } & Events,
 ): Cache
 
@@ -117,6 +125,7 @@ export declare class Cache {
       ttl: number | ((result: unknown) => number);
       stale?: number | ((result: unknown) => number);
       storage: StorageInterface;
+      syncCache?: SyncCacheOptions;
     } & Events
   )
 
@@ -127,6 +136,7 @@ export declare class Cache {
       transformer?: DataTransformer;
       ttl?: number | ((result: Awaited<ReturnType<T>>) => number);
       stale?: number | ((result: Awaited<ReturnType<T>>) => number);
+      syncCache?: SyncCacheOptions;
       serialize?: (...args: any[]) => any;
       references?: (
         args: Parameters<T>[0],
