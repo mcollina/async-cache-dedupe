@@ -4,7 +4,7 @@ const { describe, test, before, after } = require('node:test')
 const assert = require('node:assert')
 const { tspl } = require('@matteo.collina/tspl')
 const Redis = require('ioredis')
-const stringify = require('safe-stable-stringify')
+const { identify } = require('object-identity')
 
 const { kValues, kStorage } = require('../src/symbol')
 const createStorage = require('../src/storage')
@@ -45,7 +45,7 @@ describe('base', async () => {
 
     cache.define('fetchSomething', async (value, key) => {
       equal(value, expected.shift())
-      equal(stringify(value), key)
+      equal(identify(value), key)
       return { k: value }
     })
 
@@ -169,7 +169,7 @@ describe('base', async () => {
     const p1 = cache.fetchSomething({ k: 42 })
     const p2 = cache.fetchSomething({ k: 24 })
 
-    deepStrictEqual([...cache[kValues].fetchSomething.dedupes.keys()], ['42', '24'])
+    deepStrictEqual([...cache[kValues].fetchSomething.dedupes.keys()], ['n42', 'n24'])
     const res = await Promise.all([p1, p2])
 
     deepStrictEqual(res, [
@@ -266,7 +266,7 @@ describe('base', async () => {
 
     cache.define('fetchSomething', async (query, cacheKey) => {
       deepStrictEqual(query, expected.shift())
-      equal(stringify(query), cacheKey)
+      equal(identify(query), cacheKey)
 
       return { k: query }
     })
@@ -564,7 +564,7 @@ describe('base', async () => {
 
     cache.define('fetchSomething', async (query, cacheKey) => {
       deepStrictEqual(query, expected.shift())
-      equal(stringify(query), cacheKey)
+      equal(identify(query), cacheKey)
       return { k: query }
     })
 
